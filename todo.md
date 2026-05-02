@@ -56,6 +56,15 @@ if (mods & MOD_MASK_SHIFT) { rgb_matrix_set_color(led_for_shift, R, G, B); }
 // ... CTRL / ALT / GUI similarly
 ```
 
+### feature: MO1+MO3 chord to reach a new layer
+
+from layer 0, holding MO1 then MO3 should activate an extra layer (tri-layer style). standard qmk pattern is `update_tri_layer_state(state, 1, 3, N)` inside `layer_state_set_user` in `source/m57/keymaps/via/keymap.c`, where N is the new layer index.
+
+decisions before coding:
+- target layer index. 10 dynamic layers are already configured (`DYNAMIC_KEYMAP_LAYER_COUNT = 10`), so pick a free slot or bump the count (and check eeprom budget against the 4kb cap).
+- what goes on the new layer. without a defined keymap it's just dead weight.
+- whether to add it as a vial-editable dynamic layer or hardcode in source.
+
 ### feature: layer indicator
 
 with 10 dynamic layers configured, a single LED (or zone) showing active layer pays off quickly. same hook + `get_highest_layer(layer_state)`. consider mapping each layer to a distinct hue.
@@ -78,3 +87,14 @@ workaround paths, in order of robustness:
 3. **switch the gate to compose / kana.** other HID lock bits that some compositors actually flip; `host_keyboard_led_state()` exposes them too.
 
 option 1 is the right call since it survives any future OS shenanigans; do it next time the toml is touched.
+
+### bug: left half keypresses register as right-half matrix coordinates
+
+with `MASTER_RIGHT` + `SPLIT_HAND_PIN C1` + `SPLIT_HAND_PIN_LOW_IS_LEFT` in `source/m57/config.h`, each half decides which side it is at boot by reading pin C1: low = left (slave), high/floating = right (master). symptom "left keys appear as right-side input on the host, but right keys work fine" is the left half booting with C1 floating high - left half thinks it's right, fills the right-side rows with its own matrix state, and the actual left rows (0-4) never get populated. right side works because right's C1 is supposed to read high anyway.
+
+fix paths in order of effort:
+
+1. **switch to EE_HANDS.** uncomment `#define EE_HANDS` in `config.h:50` and remove (or guard) `SPLIT_HAND_PIN` / `SPLIT_HAND_PIN_LOW_IS_LEFT`. then reflash each half with matching handedness via the qmk cli (`-bl uf2-split-left` / `-bl uf2-split-right`) or two per-side build targets. hand state lives in eeprom, no pin reading involved - survives any C1 trace damage.
+2. **fix the hardware.** put a multimeter on MCU pin C1 of the LEFT pcb when powered - should read 0V to GND. if it reads ~3.3V, the trace from C1 to GND (or the L / "left" jumper pad on the back of the pcb) is broken. resolder the bridge.
+
+option 1 is the right call - one config change, two flashes, no soldering.
