@@ -70,25 +70,19 @@ static bool borne_status(effect_params_t* params) {
                 borne_set(46, led_min, led_max, mr, mg, mb);
                 borne_set(47, led_min, led_max, mr, mg, mb);
             }
-            // priority 2: num_lock
-            if (leds.num_lock) {
-                borne_set(41, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: caps_lock
-            if (leds.caps_lock) {
-                borne_set(48, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: scroll_lock
-            if (leds.scroll_lock) {
-                borne_set(54, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: to5_indicator
-            borne_set(6, led_min, led_max, 0, br, 0);
             // priority 2: l0_yellow_specials
             borne_set(13, led_min, led_max, br, br, 0);
-            borne_set(20, led_min, led_max, br, br, 0);
             borne_set(27, led_min, led_max, br, br, 0);
+            borne_set(48, led_min, led_max, br, br, 0);
             borne_set(56, led_min, led_max, br, br, 0);
+            // priority 3: num_lock
+            if (leds.num_lock) {
+                borne_set(35, led_min, led_max, 0, br, 0);
+            }
+            // priority 3: caps_lock
+            if (leds.caps_lock) {
+                borne_set(42, led_min, led_max, 0, br, 0);
+            }
             break;
         case 1:
             // priority 1: home_row_left
@@ -111,20 +105,11 @@ static bool borne_status(effect_params_t* params) {
                 borne_set(46, led_min, led_max, mr, mg, mb);
                 borne_set(47, led_min, led_max, mr, mg, mb);
             }
-            // priority 2: num_lock
-            if (leds.num_lock) {
-                borne_set(41, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: caps_lock
-            if (leds.caps_lock) {
-                borne_set(48, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: scroll_lock
-            if (leds.scroll_lock) {
-                borne_set(54, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: to5_indicator
-            borne_set(6, led_min, led_max, 0, br, 0);
+            // priority 1: l1_lock_positions
+            borne_set(35, led_min, led_max, br, br, 0);
+            borne_set(42, led_min, led_max, br, br, 0);
+            // priority 2: l1_active_trigger
+            borne_set(27, led_min, led_max, br, 0, br);
             // priority 2: l1_bootloader
             borne_set(0, led_min, led_max, 255, 0, 0);
             // priority 2: l1_fkeys
@@ -143,6 +128,19 @@ static bool borne_status(effect_params_t* params) {
             // priority 2: l1_minus_equal
             borne_set(55, led_min, led_max, 0, 0, br);
             borne_set(56, led_min, led_max, 0, 0, br);
+            // priority 2: l1_thumb_extra
+            borne_set(57, led_min, led_max, br, br, 0);
+            // priority 2: l1_l3_trigger_hints
+            borne_set(13, led_min, led_max, br, br, 0);
+            borne_set(48, led_min, led_max, br, br, 0);
+            // priority 3: num_lock
+            if (leds.num_lock) {
+                borne_set(35, led_min, led_max, 0, br, 0);
+            }
+            // priority 3: caps_lock
+            if (leds.caps_lock) {
+                borne_set(42, led_min, led_max, 0, br, 0);
+            }
             break;
         case 2:
             // priority 1: home_row_left
@@ -155,23 +153,17 @@ static bool borne_status(effect_params_t* params) {
                 borne_set(17, led_min, led_max, mr, mg, mb);
                 borne_set(18, led_min, led_max, mr, mg, mb);
             }
-            // priority 2: num_lock
-            if (leds.num_lock) {
-                borne_set(41, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: caps_lock
-            if (leds.caps_lock) {
-                borne_set(48, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: scroll_lock
-            if (leds.scroll_lock) {
-                borne_set(54, led_min, led_max, 0, br, 0);
-            }
+            // priority 2: l2_active_trigger
+            borne_set(13, led_min, led_max, br, 0, br);
             // priority 2: arrows
             borne_set(38, led_min, led_max, br, br, 0);
             borne_set(44, led_min, led_max, br, br, 0);
             borne_set(45, led_min, led_max, br, br, 0);
             borne_set(46, led_min, led_max, br, br, 0);
+            // priority 2: l2_trigger_hints
+            borne_set(27, led_min, led_max, br, br, 0);
+            borne_set(48, led_min, led_max, br, br, 0);
+            borne_set(56, led_min, led_max, br, br, 0);
             break;
         case 3:
             // priority 1: home_row_right
@@ -184,22 +176,11 @@ static bool borne_status(effect_params_t* params) {
                 borne_set(46, led_min, led_max, mr, mg, mb);
                 borne_set(47, led_min, led_max, mr, mg, mb);
             }
-            // priority 1: l3_lock_positions
-            borne_set(41, led_min, led_max, br, br, 0);
+            // priority 2: l3_active_trigger
+            borne_set(56, led_min, led_max, br, 0, br);
+            // priority 2: l1_l3_trigger_hints
+            borne_set(13, led_min, led_max, br, br, 0);
             borne_set(48, led_min, led_max, br, br, 0);
-            borne_set(54, led_min, led_max, br, br, 0);
-            // priority 2: num_lock
-            if (leds.num_lock) {
-                borne_set(41, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: caps_lock
-            if (leds.caps_lock) {
-                borne_set(48, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: scroll_lock
-            if (leds.scroll_lock) {
-                borne_set(54, led_min, led_max, 0, br, 0);
-            }
             // priority 2: l3_bootloader
             borne_set(34, led_min, led_max, 255, 0, 0);
             // priority 2: l3_mouse_arrows
@@ -228,18 +209,9 @@ static bool borne_status(effect_params_t* params) {
                 borne_set(46, led_min, led_max, mr, mg, mb);
                 borne_set(47, led_min, led_max, mr, mg, mb);
             }
-            // priority 2: num_lock
-            if (leds.num_lock) {
-                borne_set(41, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: caps_lock
-            if (leds.caps_lock) {
-                borne_set(48, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: scroll_lock
-            if (leds.scroll_lock) {
-                borne_set(54, led_min, led_max, 0, br, 0);
-            }
+            // priority 2: l4_active_triggers
+            borne_set(27, led_min, led_max, br, 0, br);
+            borne_set(57, led_min, led_max, br, 0, br);
             // priority 2: l4_numpad_digits
             borne_set(8, led_min, led_max, 0, br, 0);
             borne_set(9, led_min, led_max, 0, br, 0);
@@ -261,20 +233,10 @@ static bool borne_status(effect_params_t* params) {
             borne_set(25, led_min, led_max, 0, 0, br);
             break;
         case 5:
-            // priority 2: num_lock
-            if (leds.num_lock) {
-                borne_set(41, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: caps_lock
-            if (leds.caps_lock) {
-                borne_set(48, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: scroll_lock
-            if (leds.scroll_lock) {
-                borne_set(54, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: to5_indicator
-            borne_set(6, led_min, led_max, 0, br, 0);
+            // priority 2: l5_l6_back_indicator
+            borne_set(48, led_min, led_max, br, 0, br);
+            // priority 2: l5_tab_indicator
+            borne_set(13, led_min, led_max, br, br, 0);
             // priority 2: thumb_shift
             borne_set(27, led_min, led_max, 255, 0, 0);
             // priority 2: thumb_ctrl
@@ -285,25 +247,15 @@ static bool borne_status(effect_params_t* params) {
             borne_set(57, led_min, led_max, 255, 255, 255);
             break;
         case 6:
-            // priority 2: num_lock
-            if (leds.num_lock) {
-                borne_set(41, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: caps_lock
-            if (leds.caps_lock) {
-                borne_set(48, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: scroll_lock
-            if (leds.scroll_lock) {
-                borne_set(54, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: to5_indicator
-            borne_set(6, led_min, led_max, 0, br, 0);
             // priority 2: arrows
             borne_set(38, led_min, led_max, br, br, 0);
             borne_set(44, led_min, led_max, br, br, 0);
             borne_set(45, led_min, led_max, br, br, 0);
             borne_set(46, led_min, led_max, br, br, 0);
+            // priority 2: l5_l6_back_indicator
+            borne_set(48, led_min, led_max, br, 0, br);
+            // priority 2: l6_tab_indicator
+            borne_set(13, led_min, led_max, br, 0, br);
             // priority 2: thumb_shift
             borne_set(27, led_min, led_max, 255, 0, 0);
             // priority 2: thumb_ctrl
@@ -313,19 +265,32 @@ static bool borne_status(effect_params_t* params) {
             // priority 2: thumb_gui
             borne_set(57, led_min, led_max, 255, 255, 255);
             break;
+        case 7:
+            // priority 2: l7_finger_hint_green
+            borne_set(6, led_min, led_max, 0, br, 0);
+            // priority 2: l7_finger_hint_yellow
+            borne_set(7, led_min, led_max, br, br, 0);
+            borne_set(8, led_min, led_max, br, br, 0);
+            borne_set(9, led_min, led_max, br, br, 0);
+            borne_set(10, led_min, led_max, br, br, 0);
+            borne_set(14, led_min, led_max, br, br, 0);
+            borne_set(15, led_min, led_max, br, br, 0);
+            borne_set(16, led_min, led_max, br, br, 0);
+            borne_set(17, led_min, led_max, br, br, 0);
+            borne_set(27, led_min, led_max, br, br, 0);
+            borne_set(28, led_min, led_max, br, br, 0);
+            borne_set(37, led_min, led_max, br, br, 0);
+            borne_set(38, led_min, led_max, br, br, 0);
+            borne_set(39, led_min, led_max, br, br, 0);
+            borne_set(40, led_min, led_max, br, br, 0);
+            borne_set(44, led_min, led_max, br, br, 0);
+            borne_set(45, led_min, led_max, br, br, 0);
+            borne_set(46, led_min, led_max, br, br, 0);
+            borne_set(47, led_min, led_max, br, br, 0);
+            borne_set(55, led_min, led_max, br, br, 0);
+            borne_set(56, led_min, led_max, br, br, 0);
+            break;
         default:
-            // priority 2: num_lock
-            if (leds.num_lock) {
-                borne_set(41, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: caps_lock
-            if (leds.caps_lock) {
-                borne_set(48, led_min, led_max, 0, br, 0);
-            }
-            // priority 2: scroll_lock
-            if (leds.scroll_lock) {
-                borne_set(54, led_min, led_max, 0, br, 0);
-            }
             break;
     }
 
