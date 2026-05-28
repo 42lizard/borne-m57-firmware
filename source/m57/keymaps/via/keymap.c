@@ -10,7 +10,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,-------------------------------------------------------.      ,-------------------------------------------------------------.
      KC_TAB,   KC_Q,    KC_W,    KC_E,   KC_R,   KC_T,  KC_UP,      KC_LEFT,  KC_Y,  KC_U,   KC_I,    KC_O,   KC_P,    KC_LBRC,
   //|--------+--------+--------+--------+--------+--------+----|  |--------+--------+--------+--------+-+--------+-----+----------|
-     KC_CAPS,  KC_A,    KC_S,    KC_D,    KC_F,  KC_G,  KC_DOWN,    KC_RIGHT, KC_H,  KC_J,   KC_K,    KC_L,   KC_SCLN, KC_ENTER, 
+  // home row mods (GACS): A=gui S=alt D=ctl F=sft / J=sft K=ctl L=alt ;=gui
+     KC_CAPS, LGUI_T(KC_A), LALT_T(KC_S), LCTL_T(KC_D), LSFT_T(KC_F), KC_G, KC_DOWN,   KC_RIGHT, KC_H, LSFT_T(KC_J), LCTL_T(KC_K), LALT_T(KC_L), LGUI_T(KC_SCLN), KC_ENTER,
   //|--------+--------+--------+--------+--------+--------+----'  `--------+--------+--------+-------+-----------+--------+--------|
      KC_LSFT,  KC_Z,    KC_X,    KC_C,    KC_V,  KC_B,  KC_MUTE,       RGB_MOD,  KC_N,  KC_M,   KC_COMM, KC_DOT, KC_SLSH, KC_DEL,
   //|--------+--------+-------+-------+---------+--------+-----.  ,--------+--------+--------+--------+--------+--------+--------|
@@ -60,6 +61,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                     //`--------------------------'  `--------------------------'
   )
 };
+
+#if defined(CHORDAL_HOLD)
+// handedness map for CHORDAL_HOLD - same shape as LAYOUT macro in m57.h.
+// 'L' = left half, 'R' = right half. used to instantly resolve mod-tap holds
+// when the next key is on the opposite hand.
+const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT(
+    'L','L','L','L','L','L',                  'R','R','R','R','R','R',
+    'L','L','L','L','L','L','L',      'R','R','R','R','R','R','R',
+    'L','L','L','L','L','L','L',      'R','R','R','R','R','R','R',
+    'L','L','L','L','L','L','L',      'R','R','R','R','R','R','R',
+                'L','L','L',                'R','R','R'
+);
+#endif
+
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
     [0] =   { ENCODER_CCW_CW(KC_RIGHT, KC_LEFT),          ENCODER_CCW_CW(KC_VOLD, KC_VOLU)  },
