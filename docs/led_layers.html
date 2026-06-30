@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>borne m57 - led patterns per layer</title>
+<style>
+  :root {
+    --bg: #1a1a1a; --bg2: #222; --line: #444; --text: #e6e6e6; --muted: #888;
+    --c-white: #f0f0f0; --c-yellow: #ffd400; --c-green: #2ed05a; --c-blue: #4475ff;
+    --c-red: #ff3535; --c-pink: #ff00ff; --c-magenta: #ff00ff; --c-cyan: #19e0e0;
+    --c-grey: #777; --c-black: #0a0a0a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    margin: 2rem auto; max-width: 1200px; padding: 0 1rem; line-height: 1.5;
+  }
+  h1, h2, h3 { color: #fff; margin-top: 0; }
+  h1 { font-size: 1.6rem; margin-bottom: .25rem; }
+  h2 { margin-top: 2.5rem; border-bottom: 1px solid var(--line); padding-bottom: .35rem; font-size: 1.2rem; }
+  h3 { font-size: 1rem; margin-top: 1.25rem; color: #ddd; }
+  p { margin: .5rem 0; }
+  .muted { color: var(--muted); }
+  code, pre, .mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  pre { background: #0e0e0e; padding: .8rem 1rem; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+  .subtitle { color: var(--muted); margin-top: 0; font-size: 14px; }
+
+  /* keyboard rendering */
+  .keyboard { display: flex; gap: 2.5rem; justify-content: center; margin: 1rem 0; flex-wrap: wrap; }
+  .half { display: flex; flex-direction: column; gap: 4px; }
+  .row { display: flex; gap: 4px; }
+  .key {
+    width: 50px; height: 50px; border: 1px solid #555; border-radius: 5px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: #000;
+    text-shadow: 0 0 3px rgba(255,255,255,0.6);
+    position: relative; background: #2a2a2a; overflow: hidden; user-select: none;
+  }
+  .key .label { z-index: 2; line-height: 1.1; text-align: center; padding: 0 2px; }
+  .key .sub { z-index: 2; font-size: 8px; font-weight: 500; color: rgba(0,0,0,0.65); margin-top: 1px; }
+  .key .led-idx {
+    position: absolute; bottom: 1px; right: 3px; font-size: 8px;
+    font-family: 'JetBrains Mono', monospace; color: rgba(0,0,0,0.45); z-index: 2;
+  }
+  .key.trns .label { opacity: .55; font-weight: 500; }
+  .key.has-note::before {
+    content: '*'; position: absolute; top: 0; left: 3px; font-size: 11px;
+    color: rgba(0,0,0,0.55); z-index: 3;
+  }
+  .key.no-led .led-idx { color: rgba(255,255,255,0.25); }
+  .key.empty { background: transparent; border: 1px dashed #333; color: #444; box-shadow: none; }
+  .key.no-led { color: #aaa; text-shadow: none; }
+  .key.thumb { margin-top: 8px; }
+
+  /* color fills */
+  .c-white   { background: var(--c-white); }
+  .c-yellow  { background: var(--c-yellow); }
+  .c-green   { background: var(--c-green); }
+  .c-blue    { background: var(--c-blue); color: #fff; text-shadow: 0 0 3px rgba(0,0,0,0.7); }
+  .c-red     { background: var(--c-red); color: #fff; text-shadow: 0 0 3px rgba(0,0,0,0.7); }
+  .c-pink, .c-magenta { background: var(--c-pink); color: #fff; text-shadow: 0 0 3px rgba(0,0,0,0.7); }
+  .c-cyan    { background: var(--c-cyan); color: #003; }
+  .c-grey    { background: var(--c-grey); color: #eee; text-shadow: none; }
+  .c-modblend { background: var(--c-black); color: #ccc; text-shadow: none; }
+  .c-modblend::after {
+    content: '~mod'; position: absolute; top: 1px; left: 3px; font-size: 8px;
+    color: rgba(255,255,255,0.4); z-index: 2;
+  }
+  /* animated rgb-control keys */
+  .c-rainbow { background: linear-gradient(90deg,#f33,#fd0,#2ed05a,#19e0e0,#4475ff,#f0f,#f33); background-size: 250% 100%; animation: rainbow-slide 3s linear infinite; color:#000; }
+  .c-saw     { background: var(--c-white); color:#000; animation: saw 1.8s linear infinite; }
+  .c-pulse   { background: var(--c-white); color:#000; animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes rainbow-slide { from { background-position: 0 0; } to { background-position: 250% 0; } }
+  @keyframes saw { 0% { filter: brightness(1); } 92% { filter: brightness(.18); } 100% { filter: brightness(1); } }
+  @keyframes breathe { 0%,100% { filter: brightness(0.35); } 50% { filter: brightness(1.0); } }
+  .pulsating { animation: breathe 3.5s ease-in-out infinite; }
+
+  /* legend */
+  .legend { display: flex; flex-wrap: wrap; gap: .9rem; margin: .75rem 0 1.25rem; font-size: 13px; align-items: center; }
+  .legend .item { display: inline-flex; align-items: center; gap: .35rem; }
+  .swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #555; flex-shrink: 0; }
+  .swatch.pulsating { animation: breathe 3.5s ease-in-out infinite; }
+
+  table { border-collapse: collapse; margin: .75rem 0; font-size: 13px; }
+  th, td { border: 1px solid var(--line); padding: .35rem .55rem; text-align: center; font-family: 'JetBrains Mono', monospace; }
+  th { background: #2a2a2a; }
+
+  .layer-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1rem 1.5rem; margin-top: 1rem; }
+  .layer-panel h2 { margin-top: 0; border: none; padding: 0; }
+  .layer-panel .desc { color: var(--muted); font-size: 14px; margin: .25rem 0 .75rem; }
+  .toc { margin: .25rem 0 1.5rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+  .toc a { padding: .25rem .6rem; border-radius: 4px; background: #333; color: #ddd; text-decoration: none; font-size: 13px; }
+  .toc a:hover { background: #444; }
+  .formula { background: #0e0e0e; border-left: 3px solid var(--c-yellow); padding: .6rem .9rem; margin: .8rem 0; border-radius: 0 4px 4px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; }
+  #err { background:#2a1414; border:1px solid #813; border-radius:8px; padding:1rem 1.25rem; margin:1rem 0; display:none; }
+  #err code { color:#ffb3b3; }
+  .lednotes { font-size:13px; color:#bbb; margin:.5rem 0 0; }
+  .lednotes li { margin:.15rem 0; }
+</style>
+</head>
+<body>
+
+<h1>borne m57 - led patterns per layer</h1>
+<p class="subtitle">keycode-driven autocolor. data extracted from the live vial keymap by
+<code>scripts/led_layers_data.py</code> -&gt; <code>docs/led_layers.json</code>; coloring mirrors
+<code>borne_status.toml</code> (<code>[[keyrule]]</code> classes + <code>[[override]]</code> overlays).</p>
+
+<div id="err">
+  could not load <code>led_layers.json</code>. open this page over http, not <code>file://</code> -
+  e.g. from <code>docs/</code> run <code>python3 -m http.server</code> and visit
+  <code>http://localhost:8000/led_layers.html</code>. (regenerate the json with
+  <code>scripts/led_layers_data.py</code>.)
+</div>
+
+<div class="toc" id="toc"><a href="#home-row">home row</a></div>
+
+<div class="legend" id="legend"></div>
+<p class="muted" style="font-size:13px;">
+  each key shows its label, the <span class="mono">LED index</span> (bottom-right), a faded label for
+  transparent keys (resolved from layer 0), and a <code>*</code> top-left when a host-state rule applies
+  (hover for the note). dashed cells are matrix slots with no key; keys with a pale index have no LED.
+</p>
+
+<!-- ============================================================ -->
+<section id="home-row">
+<h2>how home-row leds work (mod-taps)</h2>
+<p>home-row keys are mod-taps (<code>LGUI_T(A)</code> ... tap = letter, hold = modifier). the autocolor
+  <code>mod_tap</code> class lights them with the <em>held-modifier blend</em>: dark unless a modifier is
+  down. plain modifier keys (e.g. on the gaming layers) instead use static per-mod colors.</p>
+<h3>channel mapping</h3>
+<div class="formula">
+shift -&gt; <span style="color:var(--c-red)">red</span> &nbsp; ctrl -&gt; <span style="color:var(--c-green)">green</span> &nbsp;
+alt -&gt; <span style="color:var(--c-blue)">blue</span> &nbsp; gui -&gt; <em>intensity bump</em> (0x00-&gt;0x55, 0xAA-&gt;0xFF)
+</div>
+<p class="muted" style="font-size:13px;">no mods held -&gt; (0,0,0) = black baseline. shift+ctrl -&gt; yellow, etc.</p>
+<h3>resulting color matrix (16 combinations)</h3>
+<table id="modblend-table"></table>
+</section>
+
+<!-- ============================================================ -->
+<section id="layers"></section>
+
+<script>
+const COLOR_LABEL = {
+  yellow: 'layer-switch / F-keys / mouse-move / arrows',
+  blue:   'mouse buttons / numpad operators',
+  green:  'mouse wheel / numpad digits / finger hint',
+  cyan:   'media / layer-2 lock hint',
+  magenta:'macros',
+  red:    'system (bootloader/reset) + shift mod',
+  pink:   'active-layer trigger',
+  cyan2:  '',
+  modblend:'mod-tap (lights when mods held)',
+  rainbow:'rgb hue (cycle)',
+  saw:    'rgb value (sawtooth)',
+  pulse:  'rgb speed (fast/slow pulse)',
+  grey:   'rgb mode',
+  white:  'unclassified / background (breathing)',
+};
+
+function keyClasses(k) {
+  const special = {
+    bg: 'c-white pulsating', modblend: 'c-modblend',
+    rainbow: 'c-rainbow', saw: 'c-saw', pulse: 'c-pulse',
+  };
+  if (k.color in special) return special[k.color];
+  return 'c-' + k.color + (k.pulse ? ' pulsating' : '');
+}
+
+function makeKey(k) {
+  const div = document.createElement('div');
+  if (!k) { div.className = 'key empty'; return div; }
+  div.className = 'key ' + keyClasses(k);
+  if (k.trns) div.classList.add('trns');
+  if (k.led === null) div.classList.add('no-led');
+  if (k.note) { div.classList.add('has-note'); div.title = k.note; }
+  if (k.eff) div.title = (k.note ? k.note + '\n' : '') + k.eff;
+
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = k.label || '';
+  div.appendChild(label);
+  if (k.sub) {
+    const sub = document.createElement('div');
+    sub.className = 'sub'; sub.textContent = k.sub; div.appendChild(sub);
+  }
+  if (k.led !== null) {
+    const idx = document.createElement('div');
+    idx.className = 'led-idx'; idx.textContent = k.led; div.appendChild(idx);
+  }
+  return div;
+}
+
+const LAYER_DESC = {
+  0: 'base - qwerty + home-row mod-taps. MO(1) left thumb, MO(3) right thumb.',
+  1: 'symbols / F-keys / boot. F1-F6 left Z-row, F7-F12 right Z-row. TO(9) on outer-left thumb -> numpad-right.',
+  2: 'arrows. num/caps lock positions show cyan, green when the host lock is on.',
+  3: 'mouse (left hand) + rgb controls (right hand). hue=rainbow, value=sawtooth, speed=pulse.',
+  4: 'numpad (left hand). digits green, operators blue. macros M0-M3 on the right inner column.',
+  5: 'gaming 1 - plain letters, thumb modifiers (static per-mod colors).',
+  6: 'gaming 2 - gaming 1 + arrow keys on the right home row.',
+  7: 'finger-position map (typing practice). green home key + yellow guides.',
+  8: 'mirrored mouse layer (right hand). reached via TO(8) on layer 3.',
+  9: 'numpad mirrored to the RIGHT hand (normal order). TO(9) from layer 1; TO(0) returns.',
+};
+
+function renderLayer(layer) {
+  const panel = document.createElement('div');
+  panel.className = 'layer-panel';
+  panel.id = 'layer' + layer.layer;
+  const h = document.createElement('h2'); h.textContent = 'layer ' + layer.layer; panel.appendChild(h);
+  const desc = document.createElement('div'); desc.className = 'desc';
+  desc.textContent = LAYER_DESC[layer.layer] || ''; panel.appendChild(desc);
+
+  // index keys by matrix position
+  const grid = Array.from({length: 10}, () => new Array(7).fill(undefined));
+  for (const k of layer.keys) grid[k.r][k.c] = k;
+
+  const kb = document.createElement('div'); kb.className = 'keyboard';
+  for (const [lo, hi, cls] of [[0, 5, 'left'], [5, 10, 'right']]) {
+    const half = document.createElement('div'); half.className = 'half ' + cls;
+    for (let r = lo; r < hi; r++) {
+      const row = document.createElement('div'); row.className = 'row';
+      for (let c = 0; c < 7; c++) {
+        const k = grid[r][c];
+        const el = makeKey(k);
+        if (r === 4 || r === 9) el.classList.add('thumb');
+        row.appendChild(el);
+      }
+      half.appendChild(row);
+    }
+    kb.appendChild(half);
+  }
+  panel.appendChild(kb);
+
+  // host-state / override notes for this layer
+  const noted = layer.keys.filter(k => k.note);
+  if (noted.length) {
+    const ul = document.createElement('ul'); ul.className = 'lednotes';
+    for (const k of noted) {
+      const li = document.createElement('li');
+      li.innerHTML = `<code>LED ${k.led}</code> (${k.label}) ${k.note}`;
+      ul.appendChild(li);
+    }
+    panel.appendChild(ul);
+  }
+  return panel;
+}
+
+function buildLegend() {
+  const seen = [
+    ['white','breathing white - background','c-white pulsating'],
+    ['yellow','layer-switch / F-keys / mouse-move / arrows','c-yellow pulsating'],
+    ['green','mouse wheel / numpad digits / ctrl','c-green pulsating'],
+    ['blue','mouse buttons / numpad operators / alt','c-blue pulsating'],
+    ['cyan','media / layer-2 lock hint','c-cyan pulsating'],
+    ['magenta','macros','c-magenta pulsating'],
+    ['red','system (boot/reset) / shift','c-red'],
+    ['pink','active-layer trigger','c-pink pulsating'],
+    ['grey','rgb mode','c-grey'],
+    ['rainbow','rgb hue (cycle)','c-rainbow'],
+    ['saw','rgb value (sawtooth)','c-saw'],
+    ['pulse','rgb speed (pulse)','c-pulse'],
+    ['modblend','mod-tap (held mods)','c-modblend'],
+  ];
+  const el = document.getElementById('legend');
+  for (const [_, text, cls] of seen) {
+    const item = document.createElement('span'); item.className = 'item';
+    item.innerHTML = `<span class="swatch ${cls}"></span>${text}`;
+    el.appendChild(item);
+  }
+}
+
+function buildTOC(n) {
+  const toc = document.getElementById('toc');
+  for (let i = 0; i < n; i++) {
+    const a = document.createElement('a'); a.href = '#layer' + i; a.textContent = 'layer ' + i;
+    toc.appendChild(a);
+  }
+}
+
+function buildModTable() {
+  const t = document.getElementById('modblend-table');
+  t.innerHTML = '<tr><th>S</th><th>C</th><th>A</th><th>G</th><th>swatch</th><th>(R, G, B)</th></tr>';
+  for (let m = 0; m < 16; m++) {
+    const sft=(m>>3)&1, ctl=(m>>2)&1, alt=(m>>1)&1, gui=m&1;
+    const base=gui?0x55:0x00, high=gui?0xFF:0xAA;
+    const r=sft?high:base, g=ctl?high:base, b=alt?high:base;
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${sft}</td><td>${ctl}</td><td>${alt}</td><td>${gui}</td>`+
+      `<td><div style="width:36px;height:18px;border-radius:3px;border:1px solid #444;background:rgb(${r},${g},${b});margin:0 auto;"></div></td>`+
+      `<td>(0x${r.toString(16).padStart(2,'0').toUpperCase()}, 0x${g.toString(16).padStart(2,'0').toUpperCase()}, 0x${b.toString(16).padStart(2,'0').toUpperCase()})</td>`;
+    t.appendChild(tr);
+  }
+}
+
+buildModTable();
+fetch('led_layers.json')
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(data => {
+    document.querySelector('.subtitle').innerHTML +=
+      ` &mdash; <span class="mono">source: ${data.meta.source}, ${data.meta.layers} layers</span>`;
+    buildLegend();
+    buildTOC(data.layers.length);
+    const container = document.getElementById('layers');
+    for (const layer of data.layers) container.appendChild(renderLayer(layer));
+  })
+  .catch(e => { document.getElementById('err').style.display = 'block'; console.error(e); });
+</script>
+
+</body>
+</html>
