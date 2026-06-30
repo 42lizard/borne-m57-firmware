@@ -1,505 +1,278 @@
 # borne_status lighting rules.
 #
-# intermediate spec used to generate the C effect. all positions are
-# expressed as absolute LED indices (0..57) per m57.c g_led_config, not
-# matrix coordinates or key labels - so this file stays correct even if
-# the user re-arranges keycodes in vial.
+# TWO layers of config, both lowered to C by scripts/borne_status_gen.py:
 #
-# evaluation model:
-#   for each LED on each frame, walk all rules whose layer set matches
-#   the active layer, whose `gate` (if any) is true, and whose led list
-#   contains this LED. the surviving rule with the highest `priority`
-#   wins. ties are not expected; if they arise, last-declared wins.
+#   1. [[keyrule]] - keycode-driven AUTOCOLORING. each frame, every LED is
+#      colored by the class of the *live vial keycode* bound under it on the
+#      active layer (transparency resolved through the layer stack). this is
+#      independent of which physical key / layer - rearrange keys in vial and
+#      the colors follow. declared order = match priority (first match wins).
 #
-# pulsating = true means the rule's color brightness is scaled by the
-# global breathing wave (sin8 over g_rgb_timer * speed). pulsating =
-# false renders the color at full brightness.
+#   2. [[override]] - per-layer LED overlays for cues that CANNOT be derived
+#      from a keycode (e.g. "you are on layer N via this trigger key", the
+#      layer-7 typing finger map, host num/caps lock state). same schema as the
+#      old [[rule]] blocks. applied AFTER autocoloring, so they win.
+#
+# precedence per frame (last writer wins):
+#   breathing-white background -> autocolor ([[keyrule]]) -> [[override]] (by priority)
+#
+# to recolor a class, reorder priority, or toggle a rule: edit this file and
+# rerun scripts/borne_status_gen.py. only adding a brand-new matcher/effect
+# primitive needs a python change (MATCH_C_EXPR / EFFECT_EMIT in the generator).
 
 [meta]
 priority_higher_wins = true
-breath = "sin8"            # sin8(scale16by8(g_rgb_timer, speed/8))
-                           # then abs8(s - 128) * 2, scaled by hsv.v.
-
-# ---------------------------------------------------------------------
-# named LED groups - referenced by rules via `leds = "<group>"`.
-# index → physical key cross-referenced from m57.c::g_led_config and
-# vil_backups/current_4.vil layer 0 keymap. comments give the layer-0
-# legend in parentheses.
-# ---------------------------------------------------------------------
-
-[groups]
-all_leds        = [
-    0, 1, 2, 3, 4, 5,
-    6, 7, 8, 9, 10, 11, 12,
-    13, 14, 15, 16, 17, 18, 19,
-    20, 21, 22, 23, 24, 25,
-    26, 27, 28,
-    29, 30, 31, 32, 33, 34,
-    35, 36, 37, 38, 39, 40, 41,
-    42, 43, 44, 45, 46, 47, 48,
-    49, 50, 51, 52, 53, 54,
-    55, 56, 57,
-]
-home_row_left   = [14, 15, 16, 17, 18]   # A S D F G  (left mod-tap row)
-home_row_right  = [43, 44, 45, 46, 47]   # H J K L ;  (right mod-tap row)
+breath = "sin8"            # sin8(scale16by8(g_rgb_timer, speed/8)) then abs8(s-128)*2, scaled by hsv.v
 
 # ---------------------------------------------------------------------
 # named colors (RGB triples).
 # ---------------------------------------------------------------------
-
 [colors]
-white  = [255, 255, 255]
-yellow = [255, 255,   0]
-green  = [  0, 255,   0]
-blue   = [  0,   0, 255]
-red    = [255,   0,   0]
-pink   = [255,   0, 255]    # active-layer indicator: which trigger key got you here
-grey   = [ 85,  85,  85]    # 0x55 grey, matches the "Meta" cell of the mod-blend chart
+white   = [255, 255, 255]
+yellow  = [255, 255,   0]
+green   = [  0, 255,   0]
+blue    = [  0,   0, 255]
+red     = [255,   0,   0]
+pink    = [255,   0, 255]    # active-layer indicator (overrides)
+magenta = [255,   0, 255]    # macros (autocolor) - same hue as pink, different role
+cyan    = [  0, 255, 255]    # media keys
+grey    = [ 85,  85,  85]    # 0x55 grey, RGB-mode-key placeholder + "Meta" cell
 
 # ---------------------------------------------------------------------
-# modifier color blend (chart-encoded).
-# referenced by rules via `color = "@mod_blend"`. computed every frame
-# from get_mods() | get_weak_mods() | get_oneshot_mods():
-#
-#   without gui: base = 0x00, high = 0xAA
-#   with    gui: base = 0x55, high = 0xFF
-#   r = shift ? high : base
-#   g = ctrl  ? high : base
-#   b = alt   ? high : base
-#
-# when no mods are held, the formula yields RGB(0,0,0) = black, which
-# is the spec-required "home row black unless pressed" baseline.
+# animation parameters for the RGB-control-key effects. tunable here.
 # ---------------------------------------------------------------------
+[anim]
+rainbow_shift = 4            # hue = (g_rgb_timer >> shift) & 0xFF   (~4s / full cycle)
+saw_shift     = 3            # value sawtooth phase = (g_rgb_timer >> shift) & 0xFF  (~2s)
+pulse_fast    = 4            # speed/4  -> faster than base breath (speed/8)
+pulse_slow    = 16           # speed/16 -> slower than base breath
+mode_color    = "grey"       # color for RGB mode-cycle keys (placeholder, undecided)
 
+# ---------------------------------------------------------------------
+# modifier color blend (chart-encoded). used by the `mod_blend` effect for
+# mod-TAP keys (e.g. LGUI_T(KC_A)): computed every frame from held mods.
+#   without gui: base 0x00 / high 0xAA ;  with gui: base 0x55 / high 0xFF
+#   r = shift?high:base ; g = ctrl?high:base ; b = alt?high:base
+# no mods held -> RGB(0,0,0) (dark). plain modifier keycodes instead use the
+# static per-mod `mod_static` effect (shift=red ctrl=green alt=blue gui=white).
+# ---------------------------------------------------------------------
 [mod_blend]
 shift_channel = "r"
 ctrl_channel  = "g"
 alt_channel   = "b"
-gui_effect    = "intensity"   # bumps base 0x00→0x55 and high 0xAA→0xFF
+gui_effect    = "intensity"
 
-# ---------------------------------------------------------------------
-# rules. order is informational only; resolution uses priority + gate.
-# ---------------------------------------------------------------------
+# =====================================================================
+# AUTOCOLOR rules - ordered keycode-class -> effect. first match wins.
+# `match` names a matcher the generator knows; `effect` is a color name
+# (pulsating) or a named effect (red_static / mod_static / mod_blend /
+# rainbow_fwd / rainbow_rev / saw_up / saw_down / pulse_fast / pulse_slow /
+# mode). unmatched keys keep the breathing-white background.
+# =====================================================================
 
-# priority 0 - global background.
-[[rule]]
-id        = "background"
-priority  = 0
-layers    = "all"
-leds      = "all_leds"
-color     = "white"
-pulsating = true
+[[keyrule]]                  # bootloader + reboot + clear-eeprom + debug-toggle
+match  = "system_danger"
+effect = "red_static"
 
-# priority 1 - home row mod blend, lock indicators.
+[[keyrule]]                  # MO/TO/LT/TG/TT/DF/OSL/LM + layer-lock
+match  = "layer_switch"
+effect = "yellow"
 
-[[rule]]
-id        = "home_row_left"
-priority  = 1
-layers    = [0, 1, 2, 8]
-# layer 8 (mirrored mouse layer) drives the mouse with the RIGHT hand, so the
-# LEFT home row is free for mods - mirror of why home_row_right is lit on layer 3.
-leds      = "home_row_left"
-color     = "@mod_blend"
-pulsating = true
+[[keyrule]]                  # LGUI_T(KC_A) etc - dynamic held-mod blend
+match  = "mod_tap"
+effect = "mod_blend"
 
-[[rule]]
-id        = "home_row_right"
-priority  = 1
-layers    = [0, 1, 3, 4]
-leds      = "home_row_right"
-color     = "@mod_blend"
-pulsating = true
+[[keyrule]]                  # plain KC_LCTL..KC_RGUI - static per-mod color
+match  = "modifier"
+effect = "mod_static"
 
-# lock indicators - now scoped to layer 1, on the [ and ] key positions
-# (where the user binds KC_NUMLOCK / KC_CAPSLOCK in vial). priority 3 so
-# they always win over the layer's other priority-2 overlays.
-# scroll lock removed entirely - linux/wayland never toggles host scroll-lock.
-[[rule]]
-id        = "num_lock"
-priority  = 3
-layers    = [0, 1]
-leds      = [35]              # KC_NUMLOCK   layer 1, [ position matrix (6,0)
-color     = "green"
-pulsating = true
-gate      = "num_lock_on"
+[[keyrule]]
+match  = "rgb_hue_up"
+effect = "rainbow_fwd"
 
-[[rule]]
-id        = "caps_lock"
-priority  = 3
-layers    = [0, 1]
-leds      = [42]              # KC_CAPSLOCK  layer 1, ] position matrix (7,0)
-color     = "green"
-pulsating = true
-gate      = "caps_lock_on"
+[[keyrule]]
+match  = "rgb_hue_down"
+effect = "rainbow_rev"
 
-# layer 1: dim yellow on the [ and ] positions so the user can locate the
-# lock keys. the green priority-3 num/caps rules above override per-LED
-# when the corresponding host lock is on.
-[[rule]]
-id        = "l1_lock_positions"
-priority  = 1
-layers    = [1]
-leds      = [
-    35,                       # KC_NUMLOCK   matrix (6,0)
-    42,                       # KC_CAPSLOCK  matrix (7,0)
-]
-color     = "yellow"
-pulsating = true
+[[keyrule]]                  # value down: ramp dark then jump to max
+match  = "rgb_val_down"
+effect = "saw_down"
 
-# priority 2 - per-layer overlays.
+[[keyrule]]                  # value up: ramp bright then drop (inverse)
+match  = "rgb_val_up"
+effect = "saw_up"
 
-# layer 0 overlays
-[[rule]]
-id        = "l0_yellow_specials"
+[[keyrule]]                  # effect- : pulse slower than base breath
+match  = "rgb_speed_down"
+effect = "pulse_slow"
+
+[[keyrule]]                  # effect+ : pulse faster than base breath
+match  = "rgb_speed_up"
+effect = "pulse_fast"
+
+[[keyrule]]                  # mode cycle next/prev - placeholder color
+match  = "rgb_mode"
+effect = "mode"
+
+[[keyrule]]                  # mouse cursor move
+match  = "mouse_cursor"
+effect = "yellow"
+
+[[keyrule]]                  # mouse buttons (L/R/M/...)
+match  = "mouse_button"
+effect = "blue"
+
+[[keyrule]]                  # mouse wheel
+match  = "mouse_wheel"
+effect = "green"
+
+[[keyrule]]                  # numeric keypad
+match  = "numpad"
+effect = "green"
+
+[[keyrule]]                  # media transport + volume + mute
+match  = "media"
+effect = "cyan"
+
+[[keyrule]]                  # vial macros M0..M31
+match  = "macro"
+effect = "magenta"
+
+[[keyrule]]                  # F1-F12
+match  = "fkeys"
+effect = "yellow"
+
+[[keyrule]]                  # arrow cluster
+match  = "arrows"
+effect = "yellow"
+
+# =====================================================================
+# OVERRIDES - per-layer cues not derivable from keycodes. emitted after
+# autocolor; sorted by priority (higher wins). LED indices are absolute
+# (0..57) per m57.c g_led_config.
+# =====================================================================
+
+# --- active-layer trigger highlight: the trigger key you held to get here
+#     flips from its autocolor yellow to pink ("yes, you're on layer N").
+[[override]]
+id        = "l1_active_trigger"
 priority  = 2
-layers    = [0]
-leds      = [
-    13,                       # LT2(KC_TAB)   matrix (2,0)
-    27,                       # MO(1)         matrix (4,4)
-    48,                       # ' / TO(5) trigger position  matrix (7,6)
-    56,                       # MO(3)         matrix (9,2)
-]
-color     = "yellow"
+layers    = [1]
+leds      = [27]              # MO(1)  matrix (4,4)
+color     = "pink"
 pulsating = true
 
-# layer 7 finger-position hint - green at left "Tab" (1,0), yellow on QWER/ASDF
-# and the physical mirror on the right side (UIOP/JKL;), plus yellow on the two
-# inner thumb keys on each half.
-[[rule]]
+[[override]]
+id        = "l2_active_trigger"
+priority  = 2
+layers    = [2]
+leds      = [13]              # LT2(TAB)  matrix (2,0)
+color     = "pink"
+pulsating = true
+
+[[override]]
+id        = "l3_active_trigger"
+priority  = 2
+layers    = [3]
+leds      = [56]              # MO(3)  matrix (9,2)
+color     = "pink"
+pulsating = true
+
+[[override]]
+id        = "l4_active_triggers"
+priority  = 2
+layers    = [4]
+leds      = [27, 57]          # MO(1) + MO(4)
+color     = "pink"
+pulsating = true
+
+# --- layer 7 typing finger-position map (alpha keys, not keycode-derivable).
+[[override]]
 id        = "l7_finger_hint_green"
 priority  = 2
 layers    = [7]
-leds      = [6]               # matrix (1,0)
+leds      = [6]               # left "Tab" home  matrix (1,0)
 color     = "green"
 pulsating = true
 
-[[rule]]
+[[override]]
 id        = "l7_finger_hint_yellow"
 priority  = 2
 layers    = [7]
 leds      = [
-    7,  8,  9,  10,           # matrix (1,1..4)
-    14, 15, 16, 17,           # matrix (2,1..4)
-    27, 28,                   # matrix (4,4..5)
-    37, 38, 39, 40,           # matrix (6,2..5)     mirror of (1,1..4)
-    44, 45, 46, 47,           # matrix (7,2..5)     mirror of (2,1..4)
-    55, 56,                   # matrix (9,1..2)     mirror of (4,4..5)
+    7,  8,  9,  10,           # QWER       matrix (1,1..4)
+    14, 15, 16, 17,           # ASDF       matrix (2,1..4)
+    27, 28,                   # inner thumbs (4,4..5)
+    37, 38, 39, 40,           # UIOP mirror (6,2..5)
+    44, 45, 46, 47,           # JKL; mirror (7,2..5)
+    55, 56,                   # inner thumbs mirror (9,1..2)
 ]
 color     = "yellow"
 pulsating = true
 
-# active-layer trigger highlight. when a layer-tap puts you on layer N,
-# the same key that got you there flips from its layer-0 yellow to pink,
-# giving a positive "yes you're on layer N" confirmation.
-
-[[rule]]
-id        = "l1_active_trigger"
+# --- gaming layers 5/6 navigation cues (the bound keycodes there are alphas /
+#     KC_TAB, so autocolor leaves them background; these mark the way out).
+[[override]]
+id        = "l5_l6_back_indicator"
 priority  = 2
-layers    = [1]
-leds      = [27]              # MO(1)         matrix (4,4)
+layers    = [5, 6]
+leds      = [48]              # back-to-base position  matrix (7,6)
 color     = "pink"
 pulsating = true
 
-[[rule]]
-id        = "l2_active_trigger"
+[[override]]
+id        = "l5_tab_indicator"
 priority  = 2
-layers    = [2]
-leds      = [13]              # LT2(KC_TAB)   matrix (2,0)
-color     = "pink"
-pulsating = true
-
-[[rule]]
-id        = "l3_active_trigger"
-priority  = 2
-layers    = [3]
-leds      = [56]              # MO(3)         matrix (9,2)
-color     = "pink"
-pulsating = true
-
-[[rule]]
-id        = "l4_active_triggers"
-priority  = 2
-layers    = [4]
-leds      = [
-    27,                       # MO(1)         matrix (4,4)
-    57,                       # MO(4)         matrix (9,3) - via layer 1
-]
-color     = "pink"
-pulsating = true
-
-# layer 1 overlays
-[[rule]]
-id        = "l1_bootloader"
-priority  = 2
-layers    = [1]
-leds      = [0]               # QK_BOOT       matrix (0,0)
-color     = "red"
-pulsating = false
-
-[[rule]]
-id        = "l1_fkeys"
-priority  = 2
-layers    = [1]
-leds      = [
-    20, 21, 22, 23, 24, 25,   # F1-F6  matrix (3,0..5)
-    49, 50, 51, 52, 53, 54,   # F7-F12 matrix (8,1..6)
-]
+layers    = [5]
+leds      = [13]              # LT2(TAB) via fall-through  matrix (2,0)
 color     = "yellow"
 pulsating = true
 
-[[rule]]
-id        = "l1_minus_equal"
+[[override]]
+id        = "l6_tab_indicator"
 priority  = 2
-layers    = [1]
-leds      = [
-    55,                       # KC_MINUS  matrix (9,1)
-    56,                       # KC_EQUAL  matrix (9,2)
-]
-color     = "blue"
+layers    = [6]
+leds      = [13]              # KC_TAB  matrix (2,0)
+color     = "pink"
 pulsating = true
 
-[[rule]]
-id        = "l1_thumb_extra"
-priority  = 2
-layers    = [1]
-leds      = [57]              # right thumb 3rd  matrix (9,3)
-color     = "yellow"
-pulsating = true
-
-# arrows: shared between layer 2 (real KC_LEFT/RIGHT/UP/DOWN) and layer 6
-# (decorative; same LED positions even if the keycodes there are different).
-[[rule]]
-id        = "arrows"
-priority  = 2
-layers    = [2, 6]
-leds      = [
-    38,                       # KC_UP    matrix (6,3)
-    44,                       # KC_LEFT  matrix (7,2)
-    45,                       # KC_DOWN  matrix (7,3)
-    46,                       # KC_RIGHT matrix (7,4)
-]
-color     = "yellow"
-pulsating = true
-
-# layer 2: hint where the layer-trigger keys live so the user can re-enter
-# layer 1 (MO1), layer 3 (MO3), or hop back to base via the ' position
-# (where the back-to-base indicator lives on gaming modes 5/6).
-[[rule]]
+# --- yellow position hints for the Tab/quote trigger keys (KC_TAB / KC_QUOTE
+#     aren't classified by autocolor, so hint where re-entry / exit lives).
+[[override]]
 id        = "l2_trigger_hints"
 priority  = 2
 layers    = [2]
-leds      = [
-    27,                       # MO(1) on layer 0  matrix (4,4)
-    48,                       # ' / back-to-base position  matrix (7,6)
-    56,                       # MO(3) on layer 0  matrix (9,2)
-]
+leds      = [48]             # ' / back-to-base position  matrix (7,6)
 color     = "yellow"
 pulsating = true
 
-# layers 1, 3: hint the Tab and ' positions yellow. on these layers the
-# active-trigger key (LED 27 on layer 1, LED 56 on layer 3) stays pink via
-# the per-layer active_trigger rules; this rule covers only the other
-# trigger-key positions (LT2 Tab + ').
-[[rule]]
+[[override]]
 id        = "l1_l3_trigger_hints"
 priority  = 2
 layers    = [1, 3]
 leds      = [
-    13,                       # LT2(Tab) on layer 0  matrix (2,0)
-    48,                       # ' / back-to-base position  matrix (7,6)
+    13,                       # LT2(Tab)  matrix (2,0)
+    48,                       # ' / back-to-base  matrix (7,6)
 ]
 color     = "yellow"
 pulsating = true
 
-# layer 3 overlays
-[[rule]]
-id        = "l3_bootloader"
-priority  = 2
-layers    = [3]
-leds      = [34]              # QK_BOOT  matrix (5,6)
-color     = "red"
-pulsating = false
-
-[[rule]]
-id        = "l3_mouse_arrows"
-priority  = 2
-layers    = [3]
-leds      = [
-    9,                        # MS_U  matrix (1,3)
-    15,                       # MS_L  matrix (2,2)
-    16,                       # MS_D  matrix (2,3)
-    17,                       # MS_R  matrix (2,4)
-]
-color     = "yellow"
-pulsating = true
-
-[[rule]]
-id        = "l3_mouse_wheel"
-priority  = 2
-layers    = [3]
-leds      = [
-    11,                       # WH_U  matrix (1,5)
-    18,                       # WH_D  matrix (2,5)
-    24,                       # WH_L  matrix (3,4)
-    25,                       # WH_R  matrix (3,5)
-]
+# --- host num/caps lock state (green when the OS lock is on). top priority.
+#     scroll lock omitted - linux/wayland never reports it back to the board.
+[[override]]
+id        = "num_lock"
+priority  = 3
+layers    = [0, 1]
+leds      = [35]              # KC_NUM_LOCK position  matrix (6,0)
 color     = "green"
 pulsating = true
+gate      = "num_lock_on"
 
-[[rule]]
-id        = "l3_mouse_buttons"
-priority  = 2
-layers    = [3]
-leds      = [
-    26,                       # KC_BTN3  matrix (4,3)
-    27,                       # KC_BTN2  matrix (4,4)
-    28,                       # KC_BTN1  matrix (4,5)
-]
-color     = "blue"
-pulsating = true
-
-# layer 4 overlays
-[[rule]]
-id        = "l4_numpad_digits"
-priority  = 2
-layers    = [4]
-leds      = [
-    8,  9,  10,               # KP_7 KP_8 KP_9   matrix (1,2..4)
-    15, 16, 17,               # KP_4 KP_5 KP_6   matrix (2,2..4)
-    21, 22, 23, 24,           # KP_0 KP_1 KP_2 KP_3 matrix (3,1..4)
-]
+[[override]]
+id        = "caps_lock"
+priority  = 3
+layers    = [0, 1]
+leds      = [42]              # KC_CAPS_LOCK position  matrix (7,0)
 color     = "green"
 pulsating = true
-
-[[rule]]
-id        = "l4_numpad_other"
-priority  = 2
-layers    = [4]
-leds      = [
-    7,                        # KP_DOT       matrix (1,1)
-    11,                       # KP_ASTERISK  matrix (1,5)
-    12,                       # KP_PLUS      matrix (1,6)
-    14,                       # KP_COMMA     matrix (2,1)
-    18,                       # KP_MINUS     matrix (2,5)
-    19,                       # KP_MINUS     matrix (2,6)  (dup keycode in vial)
-    25,                       # KP_EQUAL     matrix (3,5)
-]
-color     = "blue"
-pulsating = true
-
-# layer 8 overlays - mirrored mouse layer. left/right flip of the layer 3
-# mouse cluster onto the RIGHT half (matrix (r,c) -> (r+5, 6-c)); colors match
-# the layer 3 rules so the two layers read identically, just hand-swapped.
-# mouse buttons BTN1/BTN2 are reverse-mapped in the keymap; the LED rule is one
-# blue group so the swap doesn't change lighting.
-[[rule]]
-id        = "l8_bootloader"
-priority  = 2
-layers    = [8]
-leds      = [0]               # QK_BOOT  matrix (0,0)  (mirror of l3 LED 34 @ (5,6))
-color     = "red"
-pulsating = false
-
-[[rule]]
-id        = "l8_mouse_arrows"
-priority  = 2
-layers    = [8]
-leds      = [
-    38,                       # MS_U  matrix (6,3)
-    44,                       # MS_L  matrix (7,2)  (L/R flipped to physical position)
-    45,                       # MS_D  matrix (7,3)
-    46,                       # MS_R  matrix (7,4)
-]
-color     = "yellow"
-pulsating = true
-
-[[rule]]
-id        = "l8_mouse_wheel"
-priority  = 2
-layers    = [8]
-leds      = [
-    36,                       # WH_U  matrix (6,1)
-    43,                       # WH_D  matrix (7,1)
-    49,                       # WH_L  matrix (8,1)  (L/R flipped to physical position)
-    50,                       # WH_R  matrix (8,2)
-]
-color     = "green"
-pulsating = true
-
-[[rule]]
-id        = "l8_mouse_buttons"
-priority  = 2
-layers    = [8]
-leds      = [
-    55,                       # BTN2 (reverse-mapped)  matrix (9,1)  (mirror of LED 28)
-    56,                       # BTN1 (reverse-mapped)  matrix (9,2)  (mirror of LED 27)
-    57,                       # BTN3                   matrix (9,3)  (mirror of LED 26)
-]
-color     = "blue"
-pulsating = true
-
-# no active-trigger highlight on layer 8: it is reached by tapping TO(8) on
-# layer 3 (a sticky toggle), so there is no held key to mark.
-
-# layer 5 / 6 navigation indicators. TO(0) at LED 6 always pink (you are in
-# gaming mode, this is the way out). Tab at LED 13 differs:
-#   layer 5 (gaming 1) - LT2(Tab) still active via fall-through, yellow.
-#   layer 6 (gaming 2) - plain KC_TAB, pink to mark layer-6-only behavior.
-[[rule]]
-id        = "l5_l6_back_indicator"
-priority  = 2
-layers    = [5, 6]
-leds      = [48]              # back-to-base indicator  matrix (7,6)
-color     = "pink"
-pulsating = true
-
-[[rule]]
-id        = "l5_tab_indicator"
-priority  = 2
-layers    = [5]
-leds      = [13]              # LT2(KC_TAB) via fall-through  matrix (2,0)
-color     = "yellow"
-pulsating = true
-
-[[rule]]
-id        = "l6_tab_indicator"
-priority  = 2
-layers    = [6]
-leds      = [13]              # KC_TAB        matrix (2,0)
-color     = "pink"
-pulsating = true
-
-# layer 5 + 6 thumb modifier indicators - per-modifier color matching the
-# mod_blend chart channels (shift=R, ctrl=G, alt=B; gui = "Meta" grey since
-# gui rides the intensity axis rather than its own channel). non-pulsating.
-[[rule]]
-id        = "thumb_shift"
-priority  = 2
-layers    = [5, 6]
-leds      = [27]              # KC_LSHIFT  matrix (4,4)
-color     = "red"
-pulsating = false
-
-[[rule]]
-id        = "thumb_ctrl"
-priority  = 2
-layers    = [5, 6]
-leds      = [26]              # KC_LCTRL   matrix (4,3)
-color     = "green"
-pulsating = false
-
-[[rule]]
-id        = "thumb_alt"
-priority  = 2
-layers    = [5, 6]
-leds      = [56]              # KC_RALT    matrix (9,2)
-color     = "blue"
-pulsating = false
-
-[[rule]]
-id        = "thumb_gui"
-priority  = 2
-layers    = [5, 6]
-leds      = [57]              # KC_RGUI    matrix (9,3)
-color     = "white"
-pulsating = false
+gate      = "caps_lock_on"
