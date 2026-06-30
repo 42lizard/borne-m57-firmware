@@ -95,7 +95,9 @@ pulsating = true
 [[rule]]
 id        = "home_row_left"
 priority  = 1
-layers    = [0, 1, 2]
+layers    = [0, 1, 2, 8]
+# layer 8 (mirrored mouse layer) drives the mouse with the RIGHT hand, so the
+# LEFT home row is free for mods - mirror of why home_row_right is lit on layer 3.
 leds      = "home_row_left"
 color     = "@mod_blend"
 pulsating = true
@@ -384,6 +386,60 @@ leds      = [
 ]
 color     = "blue"
 pulsating = true
+
+# layer 8 overlays - mirrored mouse layer. left/right flip of the layer 3
+# mouse cluster onto the RIGHT half (matrix (r,c) -> (r+5, 6-c)); colors match
+# the layer 3 rules so the two layers read identically, just hand-swapped.
+# mouse buttons BTN1/BTN2 are reverse-mapped in the keymap; the LED rule is one
+# blue group so the swap doesn't change lighting.
+[[rule]]
+id        = "l8_bootloader"
+priority  = 2
+layers    = [8]
+leds      = [0]               # QK_BOOT  matrix (0,0)  (mirror of l3 LED 34 @ (5,6))
+color     = "red"
+pulsating = false
+
+[[rule]]
+id        = "l8_mouse_arrows"
+priority  = 2
+layers    = [8]
+leds      = [
+    38,                       # MS_U  matrix (6,3)
+    44,                       # MS_L  matrix (7,2)  (L/R flipped to physical position)
+    45,                       # MS_D  matrix (7,3)
+    46,                       # MS_R  matrix (7,4)
+]
+color     = "yellow"
+pulsating = true
+
+[[rule]]
+id        = "l8_mouse_wheel"
+priority  = 2
+layers    = [8]
+leds      = [
+    36,                       # WH_U  matrix (6,1)
+    43,                       # WH_D  matrix (7,1)
+    49,                       # WH_L  matrix (8,1)  (L/R flipped to physical position)
+    50,                       # WH_R  matrix (8,2)
+]
+color     = "green"
+pulsating = true
+
+[[rule]]
+id        = "l8_mouse_buttons"
+priority  = 2
+layers    = [8]
+leds      = [
+    55,                       # BTN2 (reverse-mapped)  matrix (9,1)  (mirror of LED 28)
+    56,                       # BTN1 (reverse-mapped)  matrix (9,2)  (mirror of LED 27)
+    57,                       # BTN3                   matrix (9,3)  (mirror of LED 26)
+]
+color     = "blue"
+pulsating = true
+
+# no active-trigger highlight on layer 8: it is reached by tapping TO(8) on
+# layer 3 (a sticky toggle), so there is no held key to mark.
 
 # layer 5 / 6 navigation indicators. TO(0) at LED 6 always pink (you are in
 # gaming mode, this is the way out). Tab at LED 13 differs:

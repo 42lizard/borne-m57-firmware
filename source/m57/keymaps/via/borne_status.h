@@ -290,6 +290,34 @@ static bool borne_status(effect_params_t* params) {
             borne_set(55, led_min, led_max, br, br, 0);
             borne_set(56, led_min, led_max, br, br, 0);
             break;
+        case 8:
+            // priority 1: home_row_left
+            {
+                uint8_t mr, mg, mb;
+                borne_compute_mod_blend(br, true, &mr, &mg, &mb);
+                borne_set(14, led_min, led_max, mr, mg, mb);
+                borne_set(15, led_min, led_max, mr, mg, mb);
+                borne_set(16, led_min, led_max, mr, mg, mb);
+                borne_set(17, led_min, led_max, mr, mg, mb);
+                borne_set(18, led_min, led_max, mr, mg, mb);
+            }
+            // priority 2: l8_bootloader
+            borne_set(0, led_min, led_max, 255, 0, 0);
+            // priority 2: l8_mouse_arrows
+            borne_set(38, led_min, led_max, br, br, 0);
+            borne_set(44, led_min, led_max, br, br, 0);
+            borne_set(45, led_min, led_max, br, br, 0);
+            borne_set(46, led_min, led_max, br, br, 0);
+            // priority 2: l8_mouse_wheel
+            borne_set(36, led_min, led_max, 0, br, 0);
+            borne_set(43, led_min, led_max, 0, br, 0);
+            borne_set(49, led_min, led_max, 0, br, 0);
+            borne_set(50, led_min, led_max, 0, br, 0);
+            // priority 2: l8_mouse_buttons
+            borne_set(55, led_min, led_max, 0, 0, br);
+            borne_set(56, led_min, led_max, 0, 0, br);
+            borne_set(57, led_min, led_max, 0, 0, br);
+            break;
         default:
             break;
     }
