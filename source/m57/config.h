@@ -90,6 +90,11 @@
 //#    define WS2812_DMAMUX_ID STM32_DMAMUX1_TIM2_UP // DMAMUX configuration for TIMx_UP -- only required if your MCU has a DMAMUX peripheral, see the respective reference manual for the appropriate values for your MCU.
 #define RGB_MATRIX_SLEEP
 #define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_CUSTOM_borne_status
+// NOTE: RGB_MATRIX_SPLIT {29,29} comes from info.json (split_count). With it,
+// each half renders only its own LEDs and reads ITS OWN EEPROM keymap - so the
+// keycode-driven borne_status colors are only correct on a half whose EEPROM
+// holds the live (vial) keymap. Write the layout to BOTH halves, or sync the
+// dynamic keymap master->slave, for correct colors on both sides.
 
 #define WEAR_LEVELING_LOGICAL_SIZE 4096
 #define WEAR_LEVELING_BACKING_SIZE (WEAR_LEVELING_LOGICAL_SIZE * 2)
@@ -104,6 +109,7 @@
 #define USB_POLLING_INTERVAL_MS 1
 #define SPLIT_MODS_ENABLE
 #define SPLIT_USB_TIMEOUT_POLL 10
-#define SPLIT_WATCHDOG_TIMEOUT 3000
-#define SPLIT_WATCHDOG_ENABLE
+// #define SPLIT_WATCHDOG_TIMEOUT 3000
+// #define SPLIT_WATCHDOG_ENABLE  // disabled to test LUKS cold-boot enumeration; ymdk's nft_m57_via firmware also drops this
+#define NO_USB_STARTUP_CHECK     // skip qmk's wait-for-USB-ACTIVE loop at boot; lets host enumerate kbd asap, fixes LUKS missing kbd on cold boot
 #define NEW_401_BL

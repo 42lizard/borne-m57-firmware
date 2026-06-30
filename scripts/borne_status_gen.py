@@ -48,12 +48,13 @@ GATE_C_EXPR = {
 MATCH_C_EXPR = {
     # bootloader / reboot / debug-toggle / clear-eeprom : 0x7C00..0x7C03
     "system_danger": "(kc >= QK_BOOTLOADER && kc <= QK_CLEAR_EEPROM)",
-    # any layer-switch keycode
+    # any layer-switch keycode. NOTE: QK_LAYER_LOCK is intentionally excluded -
+    # it reads as a normal key (white background), per user preference.
     "layer_switch": (
         "(IS_QK_MOMENTARY(kc) || IS_QK_TO(kc) || IS_QK_LAYER_TAP(kc) || "
         "IS_QK_TOGGLE_LAYER(kc) || IS_QK_LAYER_TAP_TOGGLE(kc) || "
         "IS_QK_DEF_LAYER(kc) || IS_QK_ONE_SHOT_LAYER(kc) || "
-        "IS_QK_LAYER_MOD(kc) || kc == QK_LAYER_LOCK)"
+        "IS_QK_LAYER_MOD(kc))"
     ),
     "mod_tap":  "IS_QK_MOD_TAP(kc)",
     "modifier": "IS_MODIFIER_KEYCODE(kc)",       # plain KC_LEFT_CTRL..KC_RIGHT_GUI
@@ -71,9 +72,10 @@ MATCH_C_EXPR = {
     "mouse_cursor": "(kc >= QK_MOUSE_CURSOR_UP && kc <= QK_MOUSE_CURSOR_RIGHT)",
     "mouse_button": "(kc >= QK_MOUSE_BUTTON_1 && kc <= QK_MOUSE_BUTTON_8)",
     "mouse_wheel":  "(kc >= QK_MOUSE_WHEEL_UP && kc <= QK_MOUSE_WHEEL_RIGHT)",
-    "numpad": (
-        "((kc >= KC_KP_SLASH && kc <= KC_KP_DOT) || kc == KC_KP_EQUAL || "
-        "kc == KC_KP_COMMA || kc == KC_KP_EQUAL_AS400)"
+    "numpad_digit": "(kc >= KC_KP_1 && kc <= KC_KP_0)",          # KP_1..KP_0
+    "numpad_op": (                                               # / * - + enter . = , and as400
+        "((kc >= KC_KP_SLASH && kc <= KC_KP_ENTER) || kc == KC_KP_DOT || "
+        "kc == KC_KP_EQUAL || kc == KC_KP_COMMA || kc == KC_KP_EQUAL_AS400)"
     ),
     "media":  "(kc >= KC_AUDIO_MUTE && kc <= KC_MEDIA_PLAY_PAUSE)",  # 0xA8..0xAE
     "fkeys":  "(kc >= KC_F1 && kc <= KC_F12)",                       # 0x3A..0x45

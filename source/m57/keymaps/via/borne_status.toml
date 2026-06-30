@@ -126,9 +126,13 @@ effect = "blue"
 match  = "mouse_wheel"
 effect = "green"
 
-[[keyrule]]                  # numeric keypad
-match  = "numpad"
+[[keyrule]]                  # numpad digits 0-9
+match  = "numpad_digit"
 effect = "green"
+
+[[keyrule]]                  # numpad operators (/ * - + enter . = ,)
+match  = "numpad_op"
+effect = "blue"
 
 [[keyrule]]                  # media transport + volume + mute
 match  = "media"
@@ -257,12 +261,23 @@ leds      = [
 color     = "yellow"
 pulsating = true
 
+# --- layer 2: cyan base on the num/caps lock positions, so they read as
+#     "lock keys here" (cyan) and flip to green when the host lock is on
+#     (the priority-3 gated rules below win). priority 2 = below the green.
+[[override]]
+id        = "l2_lock_base"
+priority  = 2
+layers    = [2]
+leds      = [35, 42]         # num + caps lock positions  matrix (6,0)/(7,0)
+color     = "cyan"
+pulsating = true
+
 # --- host num/caps lock state (green when the OS lock is on). top priority.
 #     scroll lock omitted - linux/wayland never reports it back to the board.
 [[override]]
 id        = "num_lock"
 priority  = 3
-layers    = [0, 1]
+layers    = [0, 1, 2]
 leds      = [35]              # KC_NUM_LOCK position  matrix (6,0)
 color     = "green"
 pulsating = true
@@ -271,7 +286,7 @@ gate      = "num_lock_on"
 [[override]]
 id        = "caps_lock"
 priority  = 3
-layers    = [0, 1]
+layers    = [0, 1, 2]
 leds      = [42]              # KC_CAPS_LOCK position  matrix (7,0)
 color     = "green"
 pulsating = true

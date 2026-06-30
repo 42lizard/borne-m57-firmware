@@ -89,7 +89,7 @@ static bool borne_classify(uint16_t kc, uint8_t br,
         r = 255; g = 0; b = 0;
         *out_r = r; *out_g = g; *out_b = b; return true;
     }
-    if ((IS_QK_MOMENTARY(kc) || IS_QK_TO(kc) || IS_QK_LAYER_TAP(kc) || IS_QK_TOGGLE_LAYER(kc) || IS_QK_LAYER_TAP_TOGGLE(kc) || IS_QK_DEF_LAYER(kc) || IS_QK_ONE_SHOT_LAYER(kc) || IS_QK_LAYER_MOD(kc) || kc == QK_LAYER_LOCK)) {   // layer_switch -> yellow
+    if ((IS_QK_MOMENTARY(kc) || IS_QK_TO(kc) || IS_QK_LAYER_TAP(kc) || IS_QK_TOGGLE_LAYER(kc) || IS_QK_LAYER_TAP_TOGGLE(kc) || IS_QK_DEF_LAYER(kc) || IS_QK_ONE_SHOT_LAYER(kc) || IS_QK_LAYER_MOD(kc))) {   // layer_switch -> yellow
         r = br; g = br; b = 0;
         *out_r = r; *out_g = g; *out_b = b; return true;
     }
@@ -146,8 +146,12 @@ static bool borne_classify(uint16_t kc, uint8_t br,
         r = 0; g = br; b = 0;
         *out_r = r; *out_g = g; *out_b = b; return true;
     }
-    if (((kc >= KC_KP_SLASH && kc <= KC_KP_DOT) || kc == KC_KP_EQUAL || kc == KC_KP_COMMA || kc == KC_KP_EQUAL_AS400)) {   // numpad -> green
+    if ((kc >= KC_KP_1 && kc <= KC_KP_0)) {   // numpad_digit -> green
         r = 0; g = br; b = 0;
+        *out_r = r; *out_g = g; *out_b = b; return true;
+    }
+    if (((kc >= KC_KP_SLASH && kc <= KC_KP_ENTER) || kc == KC_KP_DOT || kc == KC_KP_EQUAL || kc == KC_KP_COMMA || kc == KC_KP_EQUAL_AS400)) {   // numpad_op -> blue
+        r = 0; g = 0; b = br;
         *out_r = r; *out_g = g; *out_b = b; return true;
     }
     if ((kc >= KC_AUDIO_MUTE && kc <= KC_MEDIA_PLAY_PAUSE)) {   // media -> cyan
@@ -217,6 +221,17 @@ static bool borne_status(effect_params_t* params) {
             borne_set(13, led_min, led_max, br, 0, br);
             // priority 2: l2_trigger_hints
             borne_set(48, led_min, led_max, br, br, 0);
+            // priority 2: l2_lock_base
+            borne_set(35, led_min, led_max, 0, br, br);
+            borne_set(42, led_min, led_max, 0, br, br);
+            // priority 3: num_lock
+            if (leds.num_lock) {
+                borne_set(35, led_min, led_max, 0, br, 0);
+            }
+            // priority 3: caps_lock
+            if (leds.caps_lock) {
+                borne_set(42, led_min, led_max, 0, br, 0);
+            }
             break;
         case 3:
             // priority 2: l3_active_trigger
