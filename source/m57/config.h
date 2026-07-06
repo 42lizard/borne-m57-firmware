@@ -69,6 +69,9 @@
 #define SERIAL_USART_RX_PAL_MODE 7 // Pin "alternate function", see the respective datasheet for the appropriate values for your MCU. default: 7
 #define SERIAL_USART_TIMEOUT 20    // USART driver timeout. default 20
 
+// vendor default; dormant while SPLIT_USB_DETECT is enabled (runtime
+// detection wins). NEVER make the role static without matching the cable
+// side - see 2026-07-06 note at SPLIT_USB_DETECT below.
 #define MASTER_RIGHT
 
 #define SPLIT_HAND_PIN C1
@@ -104,11 +107,19 @@
 //#define NO_ACTION_MACRO
 //#define NO_ACTION_FUNCTION
 
+// 2026-07-06 SPLIT_USB_DETECT kept ON after the master-role saga: static
+// MASTER_LEFT/RIGHT mutes whichever half doesn't match the cable side (it
+// enumerates USB but acts as slave - vial answers, zero keystrokes). The 2s
+// detect cost is NOT the LUKS problem; the cold-boot -71 wedge is fixed by
+// the usb self-heal in m57.c instead.
+// 2026-07-06 master detection is a custom asymmetric impl in m57.c
+// (is_keyboard_master_impl override) - see the LUKS cold-boot saga comment
+// there. These stock defines are inert but kept for documentation:
 #define SPLIT_USB_DETECT
 #define SPLIT_USB_TIMEOUT 2000
+#define SPLIT_USB_TIMEOUT_POLL 10
 #define USB_POLLING_INTERVAL_MS 1
 #define SPLIT_MODS_ENABLE
-#define SPLIT_USB_TIMEOUT_POLL 10
 // #define SPLIT_WATCHDOG_TIMEOUT 3000
 // #define SPLIT_WATCHDOG_ENABLE  // disabled to test LUKS cold-boot enumeration; ymdk's nft_m57_via firmware also drops this
 #define NO_USB_STARTUP_CHECK     // skip qmk's wait-for-USB-ACTIVE loop at boot; lets host enumerate kbd asap, fixes LUKS missing kbd on cold boot

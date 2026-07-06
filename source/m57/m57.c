@@ -104,3 +104,65 @@ void bootloader_jump(void) {
     *(volatile uint32_t *)0x2000FC00UL = 0xC220B134UL;
     NVIC_SystemReset();
 }
+
+
+// 2026-07-06 cold-boot USB self-heal. On true cold power-up the host sees
+// D+ raised before the USB stack can answer control transfers; its
+// enumeration attempts die with -71 errors and the port backs off/wedges
+// (9-16s to a working keyboard at the LUKS prompt, or dead until physical
+// replug behind some hubs). A device-side disconnect/reconnect once we are
+// fully initialized is equivalent to that replug: measured 160ms to full
+// enumeration against a live stack. Retry a few times for hosts whose USB
+// comes up later than we do (early boot).
+#include "usb_device_state.h"
+#include "usb_main.h"
+
+void housekeeping_task_kb(void) {
+    static uint32_t next_check  = 1000; // first check ~1s after main loop starts
+    static uint8_t  attempts    = 0;
+
+    if (attempts >= 3) return;
+    if (timer_read32() < next_check) return;
+
+    if (usb_device_state_get_configure_state() == USB_DEVICE_STATE_CONFIGURED) {
+        attempts = 3; // enumerated - done forever
+        return;
+    }
+    attempts++;
+    next_check = timer_read32() + 3000;
+    restart_usb_driver(&USB_DRIVER);
+}
+
+
+// 2026-07-06 asymmetric master detection (overrides QMK's weak
+// is_keyboard_master_impl). ROOT CAUSE of the LUKS dead-keyboard saga: the
+// FW16 powers the USB bay ~10s before the kernel brings USB up, so QMK's
+// stock 2s SPLIT_USB_DETECT window always expired during POST silence and
+// the cabled half declared itself SLAVE (enumerated, vial answered, but no
+// matrix/RGB/keys; replug "fixed" it because a running host answers fast).
+//   - LEFT half (the cable half at this desk): wait up to 60s for the host,
+//     so cold boot survives POST and masters the moment initrd USB is up.
+//   - RIGHT half: 3s check, then settle as slave quickly (a 60s wait here
+//     kept the slave dark for the whole LUKS window).
+// Tradeoff: cable into the RIGHT half only works when the host is already
+// running (desk replug), not across a cold boot. That matches actual usage.
+#include "usb_util.h"
+
+bool is_keyboard_left_impl(void); // raw SPLIT_HAND_PIN read - safe pre-init
+
+bool is_keyboard_master_impl(void) {
+    const uint32_t timeout_ms = is_keyboard_left_impl() ? 60000 : 3000;
+    bool is_master = false;
+    for (uint32_t t = 0; t < timeout_ms; t += 10) {
+        if (usb_connected_state()) {
+            is_master = true;
+            break;
+        }
+        wait_ms(10);
+    }
+    // mirror the stock impl: keep USB off on the slave half
+    if (!is_master) {
+        usb_disconnect();
+    }
+    return is_master;
+}

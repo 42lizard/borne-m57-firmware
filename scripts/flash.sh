@@ -36,7 +36,7 @@ while true; do
         rmdir "$MNT" 2>/dev/null || true
         echo "waiting for bootloader to write firmware and reboot..."
         # poll: wait until firmware shows up (bootloader rewrites flash + resets)
-        for i in $(seq 1 30); do
+        for i in $(seq 1 75); do
             if lsusb 2>/dev/null | grep -q "6401:45d4"; then
                 echo "rebooted as firmware. done."
                 exit 0
