@@ -88,6 +88,37 @@ workaround paths, in order of robustness:
 
 option 1 is the right call since it survives any future OS shenanigans; do it next time the toml is touched.
 
+### perf: shave cold-boot enumeration delay (~10s observed)
+
+**RESOLVED 2026-07-06** (commit 033a2ab): the real culprit was none of the
+below - `SPLIT_USB_DETECT`'s 2s window expired during FW16 POST silence and
+the cabled half declared itself slave (enumerated but mute). Fixed with an
+asymmetric `is_keyboard_master_impl` override + usb self-heal in m57.c.
+PlumBL was measured innocent (cold path jumps immediately). Keyboard is
+HID-ready 1.9s after kernel start at the LUKS prompt now. Estimates below
+kept for history:
+
+bcorne takes ~10s to enumerate after host USB hub powers on - causes LUKS keyboard not to register at unlock prompt on FW16, requires unplug/replug (see nixos repo `feedback_hyprland_tearing_edp.md` and FW16 hardware-configuration.nix `wait-for-bcorne` workaround).
+
+breakdown of the 10s (estimated, would need scope/printf to confirm exact):
+- PlumBL boot-mode-detect window: ~2-3s (UF2 bootloader waits for double-tap reset before jumping to user firmware)
+- `SPLIT_USB_DETECT` poll loop: up to 2s (`SPLIT_USB_TIMEOUT 2000` in `config.h`)
+- `SPLIT_WATCHDOG_TIMEOUT 3000` first-cycle wait
+- USART init + split sync handshake: ~1s
+- RGB matrix DMA init (WS2812 PWM driver): ~0.5s
+- USB device descriptor enumeration: ~1s
+
+two firmware-side fixes that are low risk and quick to test:
+
+1. **drop `SPLIT_USB_DETECT`** in `source/m57/config.h:102`. you already have `MASTER_RIGHT` (role hardcoded) + `SPLIT_HAND_PIN C1` (hand detected by pin). USB-detect is redundant when role is fixed by define. saves ~2s. try first - cleanest change, just one line removed.
+
+2. **reduce `SPLIT_USB_TIMEOUT` from 2000 to 500** in `config.h:103`. trades robustness for speed - if the split sync handshake fails fast it just retries on next cycle. saves another ~1.5s. do this only if #1 isn't enough.
+
+won't get to <2s but should land in the 5-6s range, which combined with the nixos-side `wait-for-bcorne` initrd service (max 15s wait) gives plenty of margin for LUKS prompt.
+
+**not** worth attempting:
+- patching out PlumBL boot-mode-detect delay - bricks the kbd if the double-tap reset detection breaks. not worth the recovery hassle for ~2s.
+
 ### bug: left half keypresses register as right-half matrix coordinates
 
 with `MASTER_RIGHT` + `SPLIT_HAND_PIN C1` + `SPLIT_HAND_PIN_LOW_IS_LEFT` in `source/m57/config.h`, each half decides which side it is at boot by reading pin C1: low = left (slave), high/floating = right (master). symptom "left keys appear as right-side input on the host, but right keys work fine" is the left half booting with C1 floating high - left half thinks it's right, fills the right-side rows with its own matrix state, and the actual left rows (0-4) never get populated. right side works because right's C1 is supposed to read high anyway.

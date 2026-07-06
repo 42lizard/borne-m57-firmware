@@ -54,7 +54,20 @@ sudo umount /mnt
 
 ## building from source
 
-the keyboard source ([source/m57/](source/m57/)) is a drop-in for vial-qmk, not a standalone project. setup:
+### docker (recommended)
+
+self-contained build, no qmk/toolchain on host. needs only docker (with BuildKit, default since Docker 23.0):
+
+```bash
+./scripts/build.sh
+# -> build/m57_via.uf2
+```
+
+first run takes ~5-10 min (apt + vial-qmk clone + submodule init + compile). subsequent runs cache everything except the final compile, ~30s. the [Dockerfile](Dockerfile) is multi-stage with a `scratch` export stage so `--output type=local` extracts just the .uf2 to `build/`.
+
+### manual (if you already have a qmk/vial-qmk tree)
+
+the keyboard source ([source/m57/](source/m57/)) is a drop-in for vial-qmk, not a standalone project:
 
 ```bash
 # clone vial-qmk (~1.4GB with submodules)
@@ -86,6 +99,8 @@ both vial and via are enabled with `VIAL_INSECURE` (no unlock combo needed). 10 
 vial keymap UID: `0x89, 0x36, 0x2A, 0xC7, 0xFA, 0xD8, 0x89, 0x45` (set in `source/m57/keymaps/via/config.h`). keymap edits made in vial persist across firmware flashes as long as this UID and the eeprom layout don't change.
 
 vial layout backups: [vil_backups/](vil_backups/).
+
+led pattern visualization (layers 0-6 + home-row mod-tap explainer): [docs/led_layers.html](docs/led_layers.html) - [rendered via htmlpreview](https://htmlpreview.github.io/?https://github.com/sophronesis/borne-m57-firmware/blob/led_layering/docs/led_layers.html).
 
 ## repo layout
 
