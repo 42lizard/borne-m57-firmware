@@ -22,7 +22,7 @@
     },
     "encoder": {
         "rotary": [
-            {"pin_a": "B8", "pin_b": "B9", "resolution": 2}
+            {"pin_a": "B8", "pin_b": "B9", "resolution": 4}
         ]
     },
         "split": {
@@ -30,7 +30,7 @@
         "encoder": {
             "right": {
                 "rotary": [
-                    {"pin_a": "B4", "pin_b": "B6", "resolution": 2}
+                    {"pin_a": "B4", "pin_b": "B6", "resolution": 4}
                 ]
             }
         }
