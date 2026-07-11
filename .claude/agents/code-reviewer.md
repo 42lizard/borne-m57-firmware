@@ -74,13 +74,14 @@ solved incident, so most are bricks.
 | `borne_status.toml` or the generator changed but `borne_status.h` not regenerated in the same diff (or `.h` changed with no source change - that's a hand edit in disguise) | ⚡ |
 | keymap layers/keycodes changed but `docs/led_layers.html` not regenerated - the visualizer claims to reflect the live keymap | ⚡ |
 | generator output made non-deterministic (dict ordering, timestamps in output) - breaks the "regenerate and diff" workflow | ⚡ |
+| generator input referenced from outside the repo (a default path only this machine has) - nobody else can rebuild the committed artifact | ⚡ |
 
 ## repo + docs rules
 
 | check | severity |
 | --- | --- |
 | commit sits directly on `master` with uncommitted work - branch off first | 🧱 |
-| a `.vil` backup added whose macros contain typed text (macros record keystrokes; a password ends up in git). macro-stripped dumps are the convention | 🧱 |
+| a `.vil` backup added whose macros contain typed text (macros record keystrokes; a password ends up in git). macro-stripped dumps are the convention. when you find one: check whether the blob is pushed and whether the remote is public (`gh repo view --json visibility`), state the exposure window (blob's commit date -> now), and direct rotation of the secret regardless of any history rewrite - github keeps force-pushed-away blobs fetchable by sha | 🧱 |
 | prebuilt `.uf2` added/replaced under `firmware/` without saying what it was built from - untraceable binaries | ⚡ |
 | `build/` output committed (gitignored for a reason) | ⚡ |
 | diff makes a claim in `CLAUDE.md` / `README.md` / config comments wrong (encoder resolution, master detect, led counts, flash procedure...) and doesn't update it. grep the docs for every constant or mechanism the diff touches | ⚡ |
@@ -94,6 +95,7 @@ solved incident, so most are bricks.
 | shebang hardcodes `/bin/bash` instead of `#!/usr/bin/env bash` - user is on nixos, there is no `/bin/bash` | 🧱 |
 | bash script without `set -euo pipefail` | ⚡ |
 | `flash.sh`-style mount logic that can leave a stale mount on failure (no unmount in an error path) | ⚡ |
+| upstream toolchain fetched unpinned in the build path (vial-qmk clone, pip installs) - uf2s become untraceable, and this repo's weak-symbol overrides (`is_keyboard_master_impl`) and rules.mk flags regress *silently* if upstream renames them | ⚡ |
 | flash/build path or usb id duplicated as a literal instead of read from the one place that owns it | 🧹 |
 
 ## comments
