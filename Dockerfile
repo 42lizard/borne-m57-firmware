@@ -26,9 +26,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install --no-cache-dir qmk
 
-# clone vial-qmk + init submodules.
-RUN git clone --depth 1 https://github.com/vial-kb/vial-qmk /vial-qmk \
+# fetch vial-qmk at a pinned commit + init submodules. bump VIAL_QMK_REF
+# deliberately, never implicitly: the LUKS fix overrides weak
+# is_keyboard_master_impl and CHORDAL_HOLD is a rules.mk flag - both regress
+# SILENTLY if upstream renames them. after a bump, re-run the flash-and-check
+# list (todo.md) before trusting a build.
+ARG VIAL_QMK_REF=00fc4627cd038ac9b7e9b8bf2b40b50e9e88aecb
+RUN git init /vial-qmk \
  && cd /vial-qmk \
+ && git remote add origin https://github.com/vial-kb/vial-qmk \
+ && git fetch --depth 1 origin ${VIAL_QMK_REF} \
+ && git checkout FETCH_HEAD \
  && git submodule update --init --recursive
 
 # tell qmk to use vial-qmk as its source tree.
