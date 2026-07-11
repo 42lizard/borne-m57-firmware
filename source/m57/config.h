@@ -121,6 +121,6 @@
 #define USB_POLLING_INTERVAL_MS 1
 #define SPLIT_MODS_ENABLE
 // #define SPLIT_WATCHDOG_TIMEOUT 3000
-// #define SPLIT_WATCHDOG_ENABLE  // disabled to test LUKS cold-boot enumeration; ymdk's nft_m57_via firmware also drops this
+// #define SPLIT_WATCHDOG_ENABLE  // disabled to test LUKS cold-boot enumeration; ymdk's nft_m57_via firmware also drops this (reference: source/nft_m57_via_reference.zip)
 #define NO_USB_STARTUP_CHECK     // skip qmk's wait-for-USB-ACTIVE loop at boot; lets host enumerate kbd asap, fixes LUKS missing kbd on cold boot
 #define NEW_401_BL

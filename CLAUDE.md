@@ -30,7 +30,7 @@ there's no lint/test - qmk's own `qmk lint -kb m57` is the only check that appli
 
 ## architecture notes
 
-**split keyboard, master-right.** `config.h` sets `MASTER_RIGHT` and `SPLIT_HAND_PIN C1` with `SPLIT_HAND_PIN_LOW_IS_LEFT`. transport is full-duplex usart1 on A9/A10 at 19200 baud (`SELECT_SOFT_SERIAL_SPEED 5`). both halves run the same binary - hand detection decides role at boot.
+**split keyboard, master = the cabled half.** role comes from the asymmetric usb-detect override `is_keyboard_master_impl` in `m57.c` (2026-07-06 LUKS fix: left waits up to 60s for the host, right 3s). `config.h` still sets `MASTER_RIGHT` but it's dormant while the override exists - see the dated saga comment there before touching either. hand detection is `SPLIT_HAND_PIN C1` with `SPLIT_HAND_PIN_LOW_IS_LEFT`. transport is full-duplex usart1 on A9/A10 at 19200 baud (`SELECT_SOFT_SERIAL_SPEED 5`). both halves run the same binary.
 
 **matrix is 10x7, not 5x7.** despite being a split, rows 0-4 are the left half and rows 5-9 are the right half in a single unified matrix (see `m57.h` `LAYOUT` macro). keymaps in `keymaps/via/keymap.c` mirror this - one `LAYOUT(...)` per layer covers both halves.
 
@@ -53,4 +53,4 @@ two routes:
 1. **source edit**: modify `source/m57/keymaps/via/keymap.c`, rebuild, reflash
 2. **vial gui**: flash once, then use vial to edit layers/macros live - dumps back to `.vil` files like the ones in `vil_backups/`. these live in eeprom and survive reflash as long as the eeprom layout doesn't change
 
-encoder behavior is in the `encoder_map` at the bottom of `keymap.c` (two encoders: left = pins B8/B9, right = pins B4/B6, both resolution 2).
+encoder behavior is in the `encoder_map` at the bottom of `keymap.c` (two encoders: left = pins B8/B9, right = pins B4/B6, both resolution 4 - bumped from 2 on 2026-07-11 because EC11 detents emit 4 quadrature steps and resolution 2 double-fired every click).

@@ -7,7 +7,7 @@ custom firmware patches for the **BORNE m57** split keyboard (sold as "Knauf Cor
 - **MCU**: STM32F401RCT6 per side (256K flash, 64K SRAM)
 - **bootloader**: LG Studio Plum UF2 Bootloader 0.0.1 (vid `239a:005d`, board id `Plum Bootloader for STM32F401`, family id `0xabcdf401`) - upstream: [HaiMianBBao/PlumBL](https://github.com/HaiMianBBao/PlumBL)
 - **firmware**: vial-qmk based, 58 ws2812 LEDs (29 per side), 2 EC11 encoders
-- **split**: master-right via `MASTER_RIGHT`, hardware hand detect on `C1`, full-duplex usart1 at 19200 baud
+- **split**: master = whichever half has the usb cable, via an asymmetric usb-detect override in `m57.c` (left waits up to 60s for the host - survives FW16 POST at the LUKS prompt; right settles in 3s). the vendor `MASTER_RIGHT` define is still set but dormant. hardware hand detect on `C1`, full-duplex usart1 at 19200 baud
 
 ## what's patched
 
@@ -41,7 +41,7 @@ assuming you're in this repo's working directory and the keyboard is in bootload
 ./scripts/flash.sh path/to/your.uf2                                    # or a custom uf2
 ```
 
-the script polls `lsusb` for the bootloader, finds the right `/dev/sd?`, mounts, copies, syncs, unmounts, and waits for the firmware reboot. it'll take about 5 seconds end-to-end. **flash both halves separately** - usb cable to one half, flash, then usb to the other half, flash again.
+the script polls `lsusb` for the bootloader, finds the right `/dev/sd?`, mounts, copies, syncs, unmounts, and waits for the firmware reboot. the copy itself is seconds, but PlumBL can be slow writing flash - the script watches up to 75s for the reboot before calling it a failure. **flash both halves separately** - usb cable to one half, flash, then usb to the other half, flash again.
 
 manual fallback if the script chokes:
 
@@ -100,7 +100,7 @@ vial keymap UID: `0x89, 0x36, 0x2A, 0xC7, 0xFA, 0xD8, 0x89, 0x45` (set in `sourc
 
 vial layout backups: [vil_backups/](vil_backups/).
 
-led pattern visualization (layers 0-6 + home-row mod-tap explainer): [docs/led_layers.html](docs/led_layers.html) - [rendered via htmlpreview](https://htmlpreview.github.io/?https://github.com/sophronesis/borne-m57-firmware/blob/led_layering/docs/led_layers.html).
+led pattern visualization (all 10 layers, keycode autocolors + home-row mod-tap explainer): [docs/led_layers.html](docs/led_layers.html). the page `fetch()`es `led_layers.json`, so it needs to be served over http - `python3 -m http.server -d docs` and open `http://localhost:8000/led_layers.html` (`file://` and htmlpreview won't load the data).
 
 ## repo layout
 
@@ -108,10 +108,12 @@ led pattern visualization (layers 0-6 + home-row mod-tap explainer): [docs/led_l
 source/m57/             keyboard definition (drop into vial-qmk/keyboards/)
 source/ld/              linker scripts (QF_STM32F401.ld, PlumBL_STM32F401.ld, STM32L433xC.ld)
 source/borne_source_vendor.zip   original vendor source for reference
+source/nft_m57_via_reference.zip ymdk nft_m57_via reference source (split-watchdog-less precedent, cited in config.h)
 firmware/               prebuilt uf2 firmware images
   *_vendor.uf2          original vendor build (broken QK_BOOT)
   *_10layers.uf2        vendor variant with 10 layer count
   *_fixed_ledconfig.uf2 patched build (this repo's output)
+  *_final_v3_asym_detect.uf2  2026-07-06 LUKS-fix build (asym master detect + usb self-heal)
 vil_backups/            user-saved vial layout snapshots
 scripts/flash.sh        bootloader-watching auto-flash helper
 CLAUDE.md               project docs aimed at Claude Code agents
