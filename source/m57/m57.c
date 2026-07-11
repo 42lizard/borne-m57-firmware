@@ -116,11 +116,17 @@ void bootloader_jump(void) {
 // comes up later than we do (early boot).
 #include "usb_device_state.h"
 #include "usb_main.h"
+#include "split_util.h"
 
+// 2026-07-11 (review finding): master-only. The slave half's USB is
+// deliberately kept off (usb_disconnect() in is_keyboard_master_impl below);
+// re-arming it here would let the host enumerate a mute half - the exact
+// pre-saga symptom this file exists to prevent.
 void housekeeping_task_kb(void) {
     static uint32_t next_check  = 1000; // first check ~1s after main loop starts
     static uint8_t  attempts    = 0;
 
+    if (!is_keyboard_master()) return;
     if (attempts >= 3) return;
     if (timer_read32() < next_check) return;
 
@@ -146,6 +152,10 @@ void housekeeping_task_kb(void) {
 //     kept the slave dark for the whole LUKS window).
 // Tradeoff: cable into the RIGHT half only works when the host is already
 // running (desk replug), not across a cold boot. That matches actual usage.
+// 2026-07-11 (review finding): second cost - on a desk replug into the RIGHT
+// half, the un-cabled LEFT half still burns its full 60s window dark before
+// settling as slave (usb_connected_state() needs USB_ACTIVE, which never
+// comes without a cable). Bench before shortening; see todo.md.
 #include "usb_util.h"
 
 bool is_keyboard_left_impl(void); // raw SPLIT_HAND_PIN read - safe pre-init

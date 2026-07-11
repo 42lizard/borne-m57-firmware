@@ -24,6 +24,13 @@ vendor set `BOOTLOADER=custom` in info.json but never wrote the implementation -
 
 ## open / future
 
+### bench-gated: split-role edges from the 2026-07-11 code review
+
+both need the physical board; don't change code past this without running the check.
+
+1. **slave-gated usb self-heal** (shipped as a one-line guard in `housekeeping_task_kb`, m57.c): verify the LUKS cold-boot path still works (cable in left, both halves alive at the prompt) - the guard must not fire on the master half.
+2. **60s dark-left on desk replug into the right half**: measure it (source says up to 60s), then decide - document as acceptable, or break the left half's wait early (e.g. on split-serial traffic from an active master). don't shorten the 60s blindly - it's the LUKS fix.
+
 ### feature: per-key static color override
 
 use `rgb_matrix_indicators_advanced_user` in `source/m57/keymaps/via/keymap.c` - paints on top of whatever animation is running, every frame.
@@ -110,7 +117,7 @@ breakdown of the 10s (estimated, would need scope/printf to confirm exact):
 
 two firmware-side fixes that are low risk and quick to test:
 
-1. **drop `SPLIT_USB_DETECT`** in `source/m57/config.h:102`. you already have `MASTER_RIGHT` (role hardcoded) + `SPLIT_HAND_PIN C1` (hand detected by pin). USB-detect is redundant when role is fixed by define. saves ~2s. try first - cleanest change, just one line removed.
+1. **drop `SPLIT_USB_DETECT`** in `source/m57/config.h:102`. you already have `MASTER_RIGHT` (role hardcoded) + `SPLIT_HAND_PIN C1` (hand detected by pin). USB-detect is redundant when role is fixed by define. saves ~2s. try first - cleanest change, just one line removed. **(DON'T - superseded by the 2026-07-06 saga: static role + no usb-detect is exactly what mutes the cabled half during POST. see the dated note in config.h before believing this paragraph.)**
 
 2. **reduce `SPLIT_USB_TIMEOUT` from 2000 to 500** in `config.h:103`. trades robustness for speed - if the split sync handshake fails fast it just retries on next cycle. saves another ~1.5s. do this only if #1 isn't enough.
 
