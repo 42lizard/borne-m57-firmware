@@ -9,7 +9,7 @@ human label, and the autocolor it lights as - derived from the SAME [[keyrule]]
 stays in sync with the real lighting. the .vil is NOT embedded in the html;
 this json is the single reference the page fetches.
 
-usage: scripts/led_layers_data.py [path-to .vil]   (default: ~/projects/a5.vil)
+usage: scripts/led_layers_data.py [path-to .vil]   (default: vil_backups/current.vil)
 """
 from __future__ import annotations
 import json, re, sys, tomllib
@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TOML = ROOT / "source/m57/keymaps/via/borne_status.toml"
 OUT = ROOT / "docs/led_layers.json"
-VIL = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.home() / "projects/a5.vil"
+VIL = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "vil_backups/current.vil"
 
 # matrix (row,col) -> LED index (None = key/slot with no LED). from m57.c g_led_config.
 LED_MATRIX = [
