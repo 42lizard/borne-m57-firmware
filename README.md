@@ -94,6 +94,26 @@ non-nixos: install `qmk` cli + `gcc-arm-embedded` via your package manager.
 
 ## vial keymap
 
+### solid layer colors
+
+The firmware selects `borne_layer_colors` on every boot without writing EEPROM.
+All keys show the color of the highest active layer (including the default layer):
+0 white, 1 red, 2 orange, 3 yellow, 4 green, 5 mint, 6 cyan, 7 blue,
+8 violet, 9 pink. Releasing a momentary layer restores the underlying layer's color.
+Vial brightness and lighting on/off still apply; turn lighting on if previously disabled.
+Other effects can still be selected in Vial until the next reboot.
+Flash both halves with the same build. Existing Vial keymaps and macros are preserved.
+
+Colors are defined in `source/m57/keymaps/via/borne_layer_colors.h`.
+Run the host-side behavior check with:
+
+```bash
+cc -std=c11 -Wall -Wextra -Werror scripts/test_layer_colors.c -o /tmp/test_layer_colors
+/tmp/test_layer_colors
+```
+
+### storage
+
 both vial and via are enabled with `VIAL_INSECURE` (no unlock combo needed). 10 dynamic layers, 15 macros, 4kb logical eeprom on wear-leveling.
 
 vial keymap UID: `0x89, 0x36, 0x2A, 0xC7, 0xFA, 0xD8, 0x89, 0x45` (set in `source/m57/keymaps/via/config.h`). keymap edits made in vial persist across firmware flashes as long as this UID and the eeprom layout don't change.

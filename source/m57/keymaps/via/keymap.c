@@ -3,6 +3,13 @@
 #include "quantum.h"
 
 #include "hal_pal.h"
+
+void keyboard_post_init_user(void) {
+    // Select the layer effect even with an older effect saved in EEPROM.
+    // Keep the user's brightness and keymap; do not write EEPROM at boot.
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_borne_layer_colors);
+}
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT(
    //,-------------------------------------------------------.     ,-------------------------------------------------------------.

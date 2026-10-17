@@ -92,7 +92,7 @@
 #    define WS2812_DMA_CHANNEL 5  // DMA Channel for TIMx_UP, see the respective reference manual for the appropriate values for your MCU.
 //#    define WS2812_DMAMUX_ID STM32_DMAMUX1_TIM2_UP // DMAMUX configuration for TIMx_UP -- only required if your MCU has a DMAMUX peripheral, see the respective reference manual for the appropriate values for your MCU.
 #define RGB_MATRIX_SLEEP
-#define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_CUSTOM_borne_status
+#define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_CUSTOM_borne_layer_colors
 // NOTE: RGB_MATRIX_SPLIT {29,29} comes from info.json (split_count). With it,
 // each half renders only its own LEDs and reads ITS OWN EEPROM keymap - so the
 // keycode-driven borne_status colors are only correct on a half whose EEPROM
