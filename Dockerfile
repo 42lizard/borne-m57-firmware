@@ -47,6 +47,13 @@ WORKDIR /vial-qmk
 
 # drop the keyboard source in. AFTER submodule init so source edits don't bust the heavy layer.
 COPY source/m57 keyboards/m57
+# Vial uses BUILD_ID as EEPROM validity marker. Keep it stable until the
+# storage schema changes, so compatible rebuilds preserve user edits.
+COPY source/m57/build_id.py util/build_id.py
+COPY scripts/vil_defaults_gen.py /tmp/vil_defaults_gen.py
+COPY vil_backups/default.vil /tmp/default.vil
+RUN python3 /tmp/vil_defaults_gen.py --input /tmp/default.vil \
+    --output keyboards/m57/keymaps/via/vil_defaults.h --check
 
 # stm32 linker scripts that vial-qmk doesn't ship by default.
 COPY source/ld/*.ld platforms/chibios/boards/common/ld/

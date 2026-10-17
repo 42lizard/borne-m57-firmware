@@ -4,8 +4,14 @@
 build/
 firmware/
 vil_backups/
+!vil_backups/
+vil_backups/*
+!vil_backups/default.vil
 docs/
 scripts/
+!scripts/
+scripts/*
+!scripts/vil_defaults_gen.py
 *.md
 *.html
 *.uf2

@@ -5,6 +5,9 @@ ENCODER_MAP_ENABLE = yes
 VIA_ENABLE = yes
 RGB_MATRIX_CUSTOM_USER = yes
 
+# Apply the backup's Vial extras after every dynamic-keymap reset.
+LDFLAGS += -Wl,--wrap=dynamic_keymap_reset
+
 # stenography uses plover's "Keyboard" machine (host-side hid intercept), not
 # qmk's STENO_ENABLE/VIRTSER which won't fit on stm32f401's 3 usb endpoints
 # alongside vial's raw_hid. layer 7 just sends regular hid keystrokes and

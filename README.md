@@ -75,6 +75,9 @@ git clone --depth 1 https://github.com/vial-kb/vial-qmk ~/projects/vial-qmk
 cd ~/projects/vial-qmk
 git submodule update --init --recursive --depth 1
 
+# use the board's stable EEPROM compatibility ID (same as the Docker build)
+cp /path/to/this/repo/source/m57/build_id.py util/build_id.py
+
 # symlink the keyboard def into the qmk tree
 ln -s /path/to/this/repo/source/m57 ~/projects/vial-qmk/keyboards/m57
 
@@ -94,9 +97,67 @@ non-nixos: install `qmk` cli + `gcc-arm-embedded` via your package manager.
 
 ## vial keymap
 
+### solid layer colors
+
+The firmware selects `borne_layer_colors` on every boot without writing EEPROM.
+All keys show the color of the highest active layer (including the default layer):
+0 white, 1 red, 2 orange, 3 yellow, 4 green, 5 mint, 6 cyan, 7 blue,
+8 violet, 9 pink. Releasing a momentary layer restores the underlying layer's color.
+Vial brightness and lighting on/off still apply; turn lighting on if previously disabled.
+Other effects can still be selected in Vial until the next reboot.
+Flash both halves with the same build. Keep a Vial backup before flashing;
+an incompatible storage-version change resets the saved configuration (see below).
+
+Colors are defined in `source/m57/keymaps/via/borne_layer_colors.h`.
+Run the host-side behavior check with:
+
+```bash
+cc -std=c11 -Wall -Wextra -Werror scripts/test_layer_colors.c -o /tmp/test_layer_colors
+/tmp/test_layer_colors
+```
+
+### storage
+
 both vial and via are enabled with `VIAL_INSECURE` (no unlock combo needed). 10 dynamic layers, 15 macros, 4kb logical eeprom on wear-leveling.
 
-vial keymap UID: `0x89, 0x36, 0x2A, 0xC7, 0xFA, 0xD8, 0x89, 0x45` (set in `source/m57/keymaps/via/config.h`). keymap edits made in vial persist across firmware flashes as long as this UID and the eeprom layout don't change.
+### compiled Vial defaults
+
+`vil_backups/default.vil` is the source for the firmware's factory settings:
+all 10 keymap and encoder layers, tap dances, combos, key overrides, alternate
+repeat keys, and QMK settings. Its 15 macros are empty. Vial remains fully
+editable; the defaults are loaded only when Vial resets its dynamic keymap,
+including initialization of invalid/empty storage. Normal startup preserves
+valid saved edits. The solid layer colors remain a separate firmware feature.
+
+Upstream Vial uses a random `BUILD_ID` as its EEPROM validity marker. This build
+replaces its generator with `source/m57/build_id.py`: stable ID `0x4D5701`,
+EEPROM schema version 1. Compatible rebuilds preserve saved Vial edits.
+The first flash from a previous random-ID build resets once to the compiled
+defaults. Normal restarts and later builds with the same schema ID preserve edits.
+
+Increment `EEPROM_SCHEMA_VERSION` when storage layout or stored-value semantics
+change: layer/encoder counts, Vial entry counts, storage allocation, or an
+incompatible upstream update. Changes to RGB effects or default keymaps alone
+do not require a bump. New compiled defaults take effect only after a manual
+factory reset or a schema-version change. Vial's normal reset remains available.
+
+After editing the backup, regenerate and check the C defaults before building:
+
+```bash
+python3 scripts/vil_defaults_gen.py
+python3 scripts/test_vil_defaults.py
+./scripts/build.sh
+```
+
+The Docker build checks that the generated header matches the backup and stops
+if it is stale. Unsupported backup fields or nonempty macros fail explicitly.
+The reset wrapper in `keymap.c` uses the pinned Vial reset function through
+`--wrap=dynamic_keymap_reset`; it loads the extra settings after upstream clears
+them, then refreshes Vial's runtime tables. Recheck this integration on upstream
+updates. To apply these defaults to an already configured keyboard, use an
+EEPROM/factory reset (this replaces the current saved configuration).
+
+vial keymap UID: `0x89, 0x36, 0x2A, 0xC7, 0xFA, 0xD8, 0x89, 0x45` (set in `source/m57/keymaps/via/config.h`). EEPROM compatibility is controlled by the schema ID above, not by this UID alone.
 
 vial layout backups: [vil_backups/](vil_backups/).
 
@@ -125,6 +186,42 @@ todo.md                 work-in-progress notes during the patch sessions
 - `source/m57/info.json` has a missing comma + trailing commas around the `[9, 2]` / `[9, 3]` block. qmk still parses it but `qmk lint` complains. fix only when it actually blocks a build
 - right half led mapping is verified for matrix col → user col alignment, but a few inner-extra LED positions are physically asymmetric vs left half (the PCB chain isn't a perfect mirror). see commit `8c3e666` for details
 - if you change the eeprom layout (e.g., bump `DYNAMIC_KEYMAP_LAYER_COUNT`), the wear-leveling backing region needs to grow too (`WEAR_LEVELING_BACKING_SIZE` in `config.h`). don't raise `DYNAMIC_KEYMAP_EEPROM_MAX_ADDR` past 4095 without adjusting this
+
+## changes relative to upstream
+
+Comparison baseline: `sophronesis/borne-m57-firmware` at
+[`956b92a`](https://github.com/sophronesis/borne-m57-firmware/commit/956b92aff84f973d48943518c8699003689e940a),
+checked on 2026-10-18. The vendor repairs, USB recovery/master detection,
+PlumBL entry, physical-layout corrections and unlock combo already exist in
+that baseline; they are not new changes in this fork.
+
+| Area | Changes in this fork |
+| --- | --- |
+| Layer lighting | New `borne_layer_colors.h` effect: one solid color for each of 10 layers, highest active/default layer wins, shared brightness and split rendering. Registered alongside `borne_status`; selected by default and on every boot without EEPROM writes. Existing effects remain selectable until reboot. |
+| Factory keymap | `vil_backups/default.vil` replaces the old four-layer compiled keymap/encoder defaults with all 10 layers, 32 entries each for tap dances, combos, key overrides and alternate repeat keys, and 26 QMK settings. All 15 macros in this backup are empty. |
+| Reset integration | `keymap.c` wraps `dynamic_keymap_reset` via a linker flag in `rules.mk`, restores Vial extras after upstream clears them, and refreshes the runtime tables. Vial remains editable; normal startup does not reapply defaults over valid saved edits. |
+| EEPROM compatibility | `source/m57/build_id.py` replaces upstream's random build-ID generator with stable schema ID `0x4D5701`. Compatible rebuilds retain edits; schema bumps and manual resets load the compiled defaults. The first transition from a random-ID build resets once. |
+| Reproducible defaults | `scripts/vil_defaults_gen.py` generates `vil_defaults.h`, translates legacy Vial keycode names, validates the backup and rejects unsupported/nonempty macro data. The Docker build rejects stale generated defaults. |
+| Build integration | Docker copies the stable ID generator into `vial-qmk/util/build_id.py` and includes only the default backup and its generator through `.dockerignore` exceptions. Manual build instructions include the same generator replacement. |
+| Verification | `test_layer_colors.c` checks colors/brightness/layer transitions; `test_vil_defaults.py` checks backup conversion and rejection of unsupported data; `test_eeprom_schema.py` compiles the pinned upstream EEPROM validity functions to check preservation, version changes, explicit reset and erased storage. |
+| Documentation | README documents the palette, factory defaults, regeneration, EEPROM schema policy, migration behavior and this upstream comparison. |
+
+The official firmware dependency remains `vial-kb/vial-qmk` at
+`00fc4627cd038ac9b7e9b8bf2b40b50e9e88aecb`. As before, this repository overlays
+`source/m57/` into `keyboards/m57/` and adds the linker scripts from `source/ld/`.
+The only replaced upstream file is now `util/build_id.py`; core Vial C sources
+remain unchanged. The reset extension is linked from the keyboard keymap.
+
+Run the checks from this repository root (the final command needs the pinned
+Vial source checkout and a host C compiler):
+
+```bash
+cc -std=c11 -Wall -Wextra -Werror scripts/test_layer_colors.c -o /tmp/test_layer_colors
+/tmp/test_layer_colors
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_vil_defaults.py
+python3 scripts/vil_defaults_gen.py --check
+python3 scripts/test_eeprom_schema.py /path/to/vial-qmk/quantum/via.c
+```
 
 ## sources / credits
 

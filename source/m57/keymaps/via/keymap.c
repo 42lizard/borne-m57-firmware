@@ -3,64 +3,35 @@
 #include "quantum.h"
 
 #include "hal_pal.h"
-const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-  [0] = LAYOUT(
-   //,-------------------------------------------------------.     ,-------------------------------------------------------------.
-     KC_ESC,   KC_1,    KC_2,    KC_3,   KC_4,   KC_5,                        KC_6,  KC_7,   KC_8,    KC_9,   KC_0,    KC_BSPC,
-  //,-------------------------------------------------------.      ,-------------------------------------------------------------.
-     KC_TAB,   KC_Q,    KC_W,    KC_E,   KC_R,   KC_T,  KC_UP,      KC_LEFT,  KC_Y,  KC_U,   KC_I,    KC_O,   KC_P,    KC_LBRC,
-  //|--------+--------+--------+--------+--------+--------+----|  |--------+--------+--------+--------+-+--------+-----+----------|
-  // home row mods (GACS): A=gui S=alt D=ctl F=sft / J=sft K=ctl L=alt ;=gui
-     KC_CAPS, LGUI_T(KC_A), LALT_T(KC_S), LCTL_T(KC_D), LSFT_T(KC_F), KC_G, KC_DOWN,   KC_RIGHT, KC_H, LSFT_T(KC_J), LCTL_T(KC_K), LALT_T(KC_L), LGUI_T(KC_SCLN), KC_ENTER,
-  //|--------+--------+--------+--------+--------+--------+----'  `--------+--------+--------+-------+-----------+--------+--------|
-     KC_LSFT,  KC_Z,    KC_X,    KC_C,    KC_V,  KC_B,  KC_MUTE,       RGB_MOD,  KC_N,  KC_M,   KC_COMM, KC_DOT, KC_SLSH, KC_DEL,
-  //|--------+--------+-------+-------+---------+--------+-----.  ,--------+--------+--------+--------+--------+--------+--------|
-                       KC_LALT,MO(1),  KC_SPC,                        KC_ENT,  MO(2),  KC_RCTL
-                 //`-----------------------------------------------'  `--------------------------'
 
-  ),
+void keyboard_post_init_user(void) {
+    // Select the layer effect even with an older effect saved in EEPROM.
+    // Keep the user's brightness and keymap; do not write EEPROM at boot.
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_borne_layer_colors);
+}
 
-  [1] = LAYOUT(
-//--------------------------------Left Hand-----------------------------------| |--------------------------------Right Hand------------------------------------------------
-   //,-------------------------------------------------------.     ,-------------------------------------------------------------.
-     KC_ESC,   KC_F1,    KC_F2,    KC_F3,   KC_F4,   KC_F5,                        KC_F6,  KC_F7,   KC_F8,    KC_F9,   KC_F10,    KC_BSPC,
-  //,-------------------------------------------------------.      ,-------------------------------------------------------------.
-     KC_TAB,   KC_Q,    KC_W,    KC_E,   KC_R,   KC_T,  KC_UP,      KC_LEFT,  KC_Y,  KC_U,   KC_I,    KC_O,   KC_P,    KC_LBRC,
-  //|--------+--------+--------+--------+--------+--------+----|  |--------+--------+--------+--------+-+--------+-----+----------|
-     KC_CAPS,  KC_A,    KC_S,    KC_D,    KC_F,  KC_G,  KC_DOWN,    KC_RIGHT, KC_H,  KC_J,   KC_K,    KC_L,   KC_SCLN, KC_ENTER, 
-  //|--------+--------+--------+--------+--------+--------+----'  `--------+--------+--------+-------+-----------+--------+--------|
-     KC_LSFT,  KC_Z,    KC_X,    KC_C,    KC_V,  KC_B,  KC_MUTE,       RGB_MOD,  KC_N,  KC_M,   KC_COMM, KC_DOT, KC_SLSH, KC_DEL,
-  //|--------+--------+-------+-------+---------+--------+-----.  ,--------+--------+--------+--------+--------+--------+--------|
-                         KC_LCTL,MO(1),  KC_SPC,                     KC_ENT,  MO(2), KC_RCTL
-  ),
+#include "dynamic_keymap.h"
+#include "qmk_settings.h"
+#include "vil_defaults.h"
 
-  [2] = LAYOUT(
-   //,-------------------------------------------------------.     ,-------------------------------------------------------------.
-     KC_ESC,   KC_1,    KC_2,    KC_3,   KC_4,   KC_5,                        KC_6,  KC_7,   KC_8,    KC_9,   KC_0,    KC_BSPC,
-  //,-------------------------------------------------------.      ,-------------------------------------------------------------.
-     KC_TAB,   KC_Q,    KC_W,    KC_E,   KC_R,   KC_T,  KC_UP,      KC_LEFT,  KC_Y,  KC_U,   KC_I,    KC_O,   KC_P,    KC_LBRC,
-  //|--------+--------+--------+--------+--------+--------+----|  |--------+--------+--------+--------+-+--------+-----+----------|
-     KC_CAPS,  KC_A,    KC_S,    KC_D,    KC_F,  KC_G,  KC_DOWN,    KC_RIGHT, KC_H,  KC_J,   KC_K,    KC_L,   KC_SCLN, KC_ENTER, 
-  //|--------+--------+--------+--------+--------+--------+----'  `--------+--------+--------+-------+-----------+--------+--------|
-     KC_LSFT,  KC_Z,    KC_X,    KC_C,    KC_V,  KC_B,  KC_MUTE,       RGB_MOD,  KC_N,  KC_M,   KC_COMM, KC_DOT, KC_SLSH, KC_DEL,
-  //|--------+--------+-------+-------+---------+--------+-----.  ,--------+--------+--------+--------+--------+--------+--------|
-                          KC_LCTL,MO(1),  KC_SPC,                   KC_ENT,  MO(2), KC_RCTL
-  ),
-
-  [3] = LAYOUT(
-    //,-------------------------------------------------------.     ,-------------------------------------------------------------.
-     KC_ESC,   KC_1,    KC_2,    KC_3,   KC_4,   KC_5,                        KC_6,  KC_7,   KC_8,    KC_9,   KC_0,    KC_BSPC,
-  //,-------------------------------------------------------.      ,-------------------------------------------------------------.
-     KC_TAB,   KC_Q,    KC_W,    KC_E,   KC_R,   KC_T,  KC_UP,      KC_LEFT,  KC_Y,  KC_U,   KC_I,    KC_O,   KC_P,    KC_LBRC,
-  //|--------+--------+--------+--------+--------+--------+----|  |--------+--------+--------+--------+-+--------+-----+----------|
-     KC_CAPS,  KC_A,    KC_S,    KC_D,    KC_F,  KC_G,  KC_DOWN,    KC_RIGHT, KC_H,  KC_J,   KC_K,    KC_L,   KC_SCLN, KC_ENTER, 
-  //|--------+--------+--------+--------+--------+--------+----'  `--------+--------+--------+-------+-----------+--------+--------|
-     KC_LSFT,  KC_Z,    KC_X,    KC_C,    KC_V,  KC_B,  KC_MUTE,       RGB_MOD,  KC_N,  KC_M,   KC_COMM, KC_DOT, KC_SLSH, KC_DEL,
-  //|--------+--------+-------+-------+---------+--------+-----.  ,--------+--------+--------+--------+--------+--------+--------|
-                      KC_LCTL,MO(1),  KC_SPC,                        KC_ENT,  MO(2),  KC_RCTL
-                    //`--------------------------'  `--------------------------'
-  )
-};
+// Wrap Vial's reset, not normal startup: existing user settings stay untouched.
+// The real function restores keymaps/encoders from flash and clears Vial extras.
+void __real_dynamic_keymap_reset(void);
+void __wrap_dynamic_keymap_reset(void) {
+    __real_dynamic_keymap_reset();
+    for (uint8_t i = 0; i < 32; i++) {
+        dynamic_keymap_set_tap_dance(i, &borne_default_tap_dance[i]);
+        dynamic_keymap_set_combo(i, &borne_default_combo[i]);
+        dynamic_keymap_set_key_override(i, &borne_default_key_override[i]);
+        dynamic_keymap_set_alt_repeat_key(i, &borne_default_alt_repeat_key[i]);
+    }
+    for (uint8_t i = 0; i < sizeof(borne_default_settings) / sizeof(borne_default_settings[0]); i++) {
+        qmk_settings_set(borne_default_settings[i].id, &borne_default_settings[i].value,
+                         sizeof(borne_default_settings[i].value));
+    }
+    // Refresh cached tap-dance/combos also for a reset issued while running.
+    vial_init();
+}
 
 #if defined(CHORDAL_HOLD)
 // handedness map for CHORDAL_HOLD - same shape as LAYOUT macro in m57.h.
@@ -73,15 +44,5 @@ const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT(
     'L','L','L','L','L','L','L',      'R','R','R','R','R','R','R',
                 'L','L','L',                'R','R','R'
 );
-#endif
-
-#if defined(ENCODER_MAP_ENABLE)
-const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
-    [0] =   { ENCODER_CCW_CW(KC_RIGHT, KC_LEFT),          ENCODER_CCW_CW(KC_VOLD, KC_VOLU)  },
-    [1] =   { ENCODER_CCW_CW(RGB_HUD, RGB_HUI),           ENCODER_CCW_CW(RGB_SAD, RGB_SAI)  },
-    [2] =   { ENCODER_CCW_CW(RGB_VAD, RGB_VAI),           ENCODER_CCW_CW(RGB_SPD, RGB_SPI)  },
-    [3] =   { ENCODER_CCW_CW(RGB_RMOD, RGB_MOD),          ENCODER_CCW_CW(KC_RIGHT, KC_LEFT) },
-    //                  Encoder 1                                     Encoder 2
-};
 #endif
 
