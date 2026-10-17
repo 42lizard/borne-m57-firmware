@@ -1,3 +1,4 @@
 build/
 .claude/*
 !.claude/agents/
+vil_backups

@@ -204,6 +204,7 @@ that baseline; they are not new changes in this fork.
 | Reproducible defaults | `scripts/vil_defaults_gen.py` generates `vil_defaults.h`, translates legacy Vial keycode names, validates the backup and rejects unsupported/nonempty macro data. The Docker build rejects stale generated defaults. |
 | Build integration | Docker copies the stable ID generator into `vial-qmk/util/build_id.py` and includes only the default backup and its generator through `.dockerignore` exceptions. Manual build instructions include the same generator replacement. |
 | Verification | `test_layer_colors.c` checks colors/brightness/layer transitions; `test_vil_defaults.py` checks backup conversion and rejection of unsupported data; `test_eeprom_schema.py` compiles the pinned upstream EEPROM validity functions to check preservation, version changes, explicit reset and erased storage. |
+| Backup hygiene | `.gitignore` excludes additional local `vil_backups` files; already tracked backups, including the compiled `default.vil`, remain versioned. |
 | Documentation | README documents the palette, factory defaults, regeneration, EEPROM schema policy, migration behavior and this upstream comparison. |
 
 The official firmware dependency remains `vial-kb/vial-qmk` at
