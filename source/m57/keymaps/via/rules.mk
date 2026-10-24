@@ -4,6 +4,7 @@ VIAL_INSECURE = yes
 ENCODER_MAP_ENABLE = yes
 VIA_ENABLE = yes
 RGB_MATRIX_CUSTOM_USER = yes
+SRC += raw_hid_layer.c
 
 # Apply the backup's Vial extras after every dynamic-keymap reset.
 LDFLAGS += -Wl,--wrap=dynamic_keymap_reset
