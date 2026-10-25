@@ -116,6 +116,89 @@ cc -std=c11 -Wall -Wextra -Werror scripts/test_layer_colors.c -o /tmp/test_layer
 /tmp/test_layer_colors
 ```
 
+### PC-controlled layer selection
+
+The `via` firmware accepts a private command on its existing VIA/Vial Raw HID
+interface. Rebuild and flash both halves with this version first. The helper
+selects a zero-based layer exclusively using QMK's `layer_move`; all ten layers
+(0–9) are supported. Selection stays in RAM, does not change the runtime or saved
+default layer, and performs no EEPROM writes. Reboot clears this selection.
+Key lookup still follows normal QMK semantics, including transparent keys falling
+through to the default layer. Physical layer keys continue to change layers normally;
+this command does not lock the selected layer.
+
+Install the Python **hidapi** package (imported as `hid`, not the separate `hid`
+package), then run:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install hidapi
+python3 scripts/select_layer.py 3
+python3 scripts/select_layer.py 0
+# If multiple matching keyboards are connected:
+python3 scripts/select_layer.py 3 --serial YOUR_SERIAL
+```
+
+The helper filters VID `6401`, PID `45d4`, usage page `ff60`, usage `61`.
+These usages identify the Raw HID interface; the keyboard interfaces must not
+receive this command. It refuses ambiguous matches. Close VIA/Vial and other
+Raw HID clients while using the helper so they cannot consume its reply. The
+reply timeout is one second; missing devices, access failures, rejected requests,
+old firmware/unexpected replies and timeouts produce a message and nonzero exit.
+
+On Linux the user needs read/write access to the matching `/dev/hidraw*` node.
+For example, install this rule in `/etc/udev/rules.d/70-borne-m57.rules`:
+
+```udev
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="6401", ATTRS{idProduct}=="45d4", TAG+="uaccess"
+```
+
+Reload rules with `sudo udevadm control --reload-rules`, then unplug/replug the
+keyboard. `uaccess` grants the active local desktop session access; headless
+setups need a local group-based rule instead. On Windows/macOS use HIDAPI's
+native HID backend and allow device access if requested by the OS.
+
+Each request is exactly **32 bytes**, excluding the HID report ID:
+
+| Byte | Request | Response |
+| --- | --- | --- |
+| 0 | `40` (private select-layer command) | `40` |
+| 1 | `01` (protocol version) | status: `00` success, `01` malformed, `02` invalid layer |
+| 2 | layer index (`00`–`09` in this build) | echoed index |
+| 3–31 | all zero | echoed bytes |
+
+All values above are hexadecimal. Layer 3: `40 01 03` followed by 29 zero bytes;
+success: `40 00 03` followed by 29 zero bytes. Layer 0 uses `00` at byte 2.
+Malformed means wrong length, version, or nonzero reserved bytes. Validation
+precedes any layer change; errors echo the request except for the status byte.
+At the hook boundary, a one-byte request returns `ff` (unhandled), and a zero-byte
+request is ignored since it has no space for an error. USB normally delivers only
+full 32-byte reports. Unrelated commands routed to the hook retain VIA's `ff`
+unhandled behavior. `40` is unused by VIA's `01`–`13` commands and Vial's `fe`
+prefix at the pinned upstream revision; recheck on upstream upgrades. VIA owns
+reply transmission through `raw_hid_receive_kb`; no new USB endpoints are added.
+
+HIDAPI writes prepend a zero report-ID byte (33 bytes total); reads of this
+unnumbered interface return only the 32-byte payload. The helper checks the
+command, echoed payload, status and reply size before reporting success.
+
+Automated checks (host C compiler and Python, no keyboard or hidapi required):
+
+```bash
+python3 scripts/test_raw_hid_layer.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_select_layer.py
+# Also exercise the real dispatcher from the Dockerfile's pinned checkout:
+python3 scripts/test_raw_hid_layer.py /path/to/vial-qmk/quantum/via.c
+```
+
+The dispatcher check stubs other QMK subsystems; it verifies VIA protocol replies,
+Vial routing, unhandled requests and one VIA-owned transmission per request.
+Hardware checks still required: switch to each layer and type a distinguishing
+key, return to layer 0, exercise physical momentary/toggle layer keys, send an
+invalid index and confirm the layer is unchanged, reboot and confirm no persisted
+selection, then reconnect VIA/Vial and verify keymap editing and RGB configuration.
+
 ### storage
 
 both vial and via are enabled with `VIAL_INSECURE` (no unlock combo needed). 10 dynamic layers, 15 macros, 4kb logical eeprom on wear-leveling.
